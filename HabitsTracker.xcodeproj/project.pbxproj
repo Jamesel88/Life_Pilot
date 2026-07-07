@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		609589F72FFA637800E2695E /* HabitsTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HabitsTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		609589F72FFA637800E2695E /* Life-Pilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Life-Pilot.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 		609589F82FFA637800E2695E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				609589F72FFA637800E2695E /* HabitsTracker.app */,
+				609589F72FFA637800E2695E /* Life-Pilot.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		609589F62FFA637800E2695E /* HabitsTracker */ = {
+		609589F62FFA637800E2695E /* Life-Pilot */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 60958A042FFA637900E2695E /* Build configuration list for PBXNativeTarget "HabitsTracker" */;
+			buildConfigurationList = 60958A042FFA637900E2695E /* Build configuration list for PBXNativeTarget "Life-Pilot" */;
 			buildPhases = (
 				609589F32FFA637800E2695E /* Sources */,
 				609589F42FFA637800E2695E /* Frameworks */,
@@ -63,11 +63,11 @@
 			fileSystemSynchronizedGroups = (
 				609589F92FFA637800E2695E /* HabitsTracker */,
 			);
-			name = HabitsTracker;
+			name = "Life-Pilot";
 			packageProductDependencies = (
 			);
 			productName = HabitsTracker;
-			productReference = 609589F72FFA637800E2695E /* HabitsTracker.app */;
+			productReference = 609589F72FFA637800E2695E /* Life-Pilot.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				609589F62FFA637800E2695E /* HabitsTracker */,
+				609589F62FFA637800E2695E /* Life-Pilot */,
 			);
 		};
 /* End PBXProject section */
@@ -254,6 +254,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Life-Pilot";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -298,6 +300,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Life-Pilot";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -341,7 +345,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		60958A042FFA637900E2695E /* Build configuration list for PBXNativeTarget "HabitsTracker" */ = {
+		60958A042FFA637900E2695E /* Build configuration list for PBXNativeTarget "Life-Pilot" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				60958A052FFA637900E2695E /* Debug */,
