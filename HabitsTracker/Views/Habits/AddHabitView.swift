@@ -7,6 +7,7 @@ struct AddHabitView: View {
 
     @State private var name = ""
     @State private var frequency: HabitFrequency = .daily
+    @State private var timesPerWeek = 1
     @State private var startDate = Date()
     @State private var hasEndDate = false
     @State private var endDate = Date()
@@ -27,6 +28,10 @@ struct AddHabitView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+
+                    if frequency == .weekly {
+                        Stepper("\(timesPerWeek)x per week", value: $timesPerWeek, in: 1...7)
+                    }
                 }
 
                 Section("Duration") {
@@ -35,13 +40,14 @@ struct AddHabitView: View {
                     if hasEndDate {
                         DatePicker("Ends", selection: $endDate,
                                    in: startDate..., displayedComponents: .date)
-                        Section("Reminder") {
-                            Toggle("Remind me", isOn: $hasReminder)
-                            if hasReminder {
-                                DatePicker("Time", selection: $reminderTime,
-                                           displayedComponents: .hourAndMinute)
-                            }
-                        }
+                    }
+                }
+
+                Section("Reminder") {
+                    Toggle("Remind me", isOn: $hasReminder)
+                    if hasReminder {
+                        DatePicker("Time", selection: $reminderTime,
+                                   displayedComponents: .hourAndMinute)
                     }
                 }
             }
@@ -55,6 +61,7 @@ struct AddHabitView: View {
                     Button("Add") {
                         let habit = Habit(name: name,
                                           frequency: frequency,
+                                          timesPerWeek: timesPerWeek,
                                           startDate: startDate,
                                           endDate: hasEndDate ? endDate : nil,
                                           reminderTime: hasReminder ? reminderTime : nil)

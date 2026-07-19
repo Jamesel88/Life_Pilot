@@ -14,6 +14,21 @@ struct EditHabitView: View {
             }
         )
     }
+
+    private var hasEndDateBinding: Binding<Bool> {
+        Binding(
+            get: { habit.endDate != nil },
+            set: { on in habit.endDate = on ? (habit.endDate ?? Date()) : nil }
+        )
+    }
+
+    private var endDateBinding: Binding<Date> {
+        Binding(
+            get: { habit.endDate ?? Date() },
+            set: { habit.endDate = $0 }
+        )
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -24,6 +39,21 @@ struct EditHabitView: View {
                         Text(f.label).tag(f)
                     }
                 }
+                .pickerStyle(.segmented)
+
+                if habit.frequency == .weekly {
+                    Stepper("\(habit.timesPerWeek)x per week", value: $habit.timesPerWeek, in: 1...7)
+                }
+
+                Section("Duration") {
+                    DatePicker("Starts", selection: $habit.startDate, displayedComponents: .date)
+                    Toggle("End date", isOn: hasEndDateBinding)
+                    if habit.endDate != nil {
+                        DatePicker("Ends", selection: endDateBinding,
+                                   in: habit.startDate..., displayedComponents: .date)
+                    }
+                }
+
                 Section("Reminder") {
                     Toggle("Remind me", isOn: reminderBinding)
                     if habit.reminderTime != nil {
@@ -36,9 +66,6 @@ struct EditHabitView: View {
                                    displayedComponents: .hourAndMinute)
                     }
                 }
-                .pickerStyle(.segmented)
-
-                DatePicker("Starts", selection: $habit.startDate, displayedComponents: .date)
             }
             .navigationTitle("Edit Habit")
             .navigationBarTitleDisplayMode(.inline)

@@ -18,42 +18,51 @@ struct TasksView: View {
     @State private var groupToEdit: TaskGroup?
     @State private var filter: TaskFilter = .days
     @State private var collapsedGroups: Set<PersistentIdentifier> = []
-
-    private var calendar: Calendar { .current }
+    @State private var searchText = ""
+    @State private var quickAddText = ""
+    @State private var showingScanList = false
 
     // MARK: - Filtered collections
 
-    private var urgentTasks: [TaskItem] {
-        allTasks.filter { $0.priority == .urgent && !$0.isCompleted }
+    /// Every section of the list, built in a single pass over the query
+    /// results instead of one full scan per section. Section membership
+    /// itself lives on the model (`TaskItem.dueBucket`) so it stays
+    /// testable and shared. Order within each section follows the query's
+    /// dueDate sort.
+    private struct Sections {
+        var overdue: [TaskItem] = []
+        var urgent: [TaskItem] = []
+        var today: [TaskItem] = []
+        var tomorrow: [TaskItem] = []
+        var thisWeek: [TaskItem] = []
+        var thisMonth: [TaskItem] = []
+        var thisYear: [TaskItem] = []
+        var outstanding: [TaskItem] = []
+        var completed: [TaskItem] = []
     }
-    private var todayTasks: [TaskItem] {
-        allTasks.filter { calendar.isDateInToday($0.dueDate) && !$0.isCompleted }
-    }
-    private var tomorrowTasks: [TaskItem] {
-        allTasks.filter { calendar.isDateInTomorrow($0.dueDate) && !$0.isCompleted }
-    }
-    private var thisWeekTasks: [TaskItem] {
-        allTasks.filter {
-            !calendar.isDateInToday($0.dueDate)
-            && !calendar.isDateInTomorrow($0.dueDate)
-            && calendar.isDate($0.dueDate, equalTo: .now, toGranularity: .weekOfYear)
-            && $0.dueDate > .now
-            && !$0.isCompleted
+
+    private func buildSections() -> Sections {
+        var sections = Sections()
+        for task in allTasks {
+            if task.isCompleted {
+                sections.completed.append(task)
+                continue
+            }
+            sections.outstanding.append(task)
+            if task.priority == .urgent {
+                sections.urgent.append(task)
+            }
+            switch task.dueBucket() {
+            case .overdue: sections.overdue.append(task)
+            case .today: sections.today.append(task)
+            case .tomorrow: sections.tomorrow.append(task)
+            case .thisWeek: sections.thisWeek.append(task)
+            case .thisMonth: sections.thisMonth.append(task)
+            case .thisYear: sections.thisYear.append(task)
+            case nil: break   // beyond this year — Outstanding only
+            }
         }
-    }
-    private var thisMonthTasks: [TaskItem] {
-        allTasks.filter {
-            calendar.isDate($0.dueDate, equalTo: .now, toGranularity: .month)
-            && !calendar.isDate($0.dueDate, equalTo: .now, toGranularity: .weekOfYear)
-            && $0.dueDate > .now
-            && !$0.isCompleted
-        }
-    }
-    private var outstandingTasks: [TaskItem] {
-        allTasks.filter { !$0.isCompleted }
-    }
-    private var completedTasks: [TaskItem] {
-        allTasks.filter(\.isCompleted)
+        return sections
     }
 
     // MARK: - Body
@@ -61,58 +70,56 @@ struct TasksView: View {
     var body: some View {
         NavigationStack {
             List {
-                // MARK: Filter menu
+                // MARK: Quick add
                 Section {
-                    Menu {
-                        ForEach(TaskFilter.allCases, id: \.self) { option in
-                            Button {
-                                filter = option
-                            } label: {
-                                if filter == option {
-                                    Label(option.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(option.rawValue)
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "line.3.horizontal")
-                            Text(filter.rawValue)
-                                .font(.subheadline)
-                            Image(systemName: "chevron.down")
-                                .font(.caption2)
-                        }
-                        .foregroundStyle(.primary)
+                    HStack {
+                        Image(systemName: "plus.circle")
+                            .foregroundStyle(.secondary)
+                        TextField("Quick add — try \"Dentist tomorrow 3pm\"",
+                                  text: $quickAddText)
+                            .onSubmit(quickAdd)
+                            .submitLabel(.done)
                     }
                 }
 
                 // MARK: Content per filter
                 switch filter {
                 case .days:
-                    taskSection("Urgent Tasks", tasks: urgentTasks)
-                    taskSection("Today", tasks: todayTasks)
-                    taskSection("Tomorrow", tasks: tomorrowTasks)
-                    taskSection("This Week", tasks: thisWeekTasks)
-                    taskSection("This Month", tasks: thisMonthTasks)
+                    let sections = buildSections()
+                    taskSection("Overdue", tasks: sections.overdue, headerColor: .red)
+                    taskSection("Urgent Tasks", tasks: sections.urgent)
+                    taskSection("Today", tasks: sections.today)
+                    taskSection("Tomorrow", tasks: sections.tomorrow)
+                    taskSection("This Week", tasks: sections.thisWeek)
+                    taskSection("This Month", tasks: sections.thisMonth)
+                    taskSection("This Year", tasks: sections.thisYear)
 
                 case .outstanding:
-                    taskSection("All outstanding", tasks: outstandingTasks)
+                    taskSection("All outstanding", tasks: buildSections().outstanding)
 
                 case .completed:
-                    if completedTasks.isEmpty {
+                    let completed = buildSections().completed
+                    if completed.isEmpty {
                         Section {
                             Text("No completed tasks yet")
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        taskSection("Completed", tasks: completedTasks)
+                        taskSection("Completed", tasks: completed)
                     }
 
                 case .groups:
+                    // One pass to bucket tasks per group, instead of
+                    // rescanning the whole task list for every group row.
+                    let tasksByGroup = Dictionary(
+                        grouping: allTasks.filter { $0.group != nil },
+                        by: { $0.group!.persistentModelID })
                     ForEach(groups) { group in
-                        let groupTasks = allTasks.filter { $0.group === group && !$0.isCompleted }
-                        let stats = groupStats(group)
+                        let groupItems = tasksByGroup[group.persistentModelID] ?? []
+                        let groupTasks = groupItems
+                            .filter { !$0.isCompleted }
+                            .filter(matchesSearch)
+                        let stats = GroupStats(tasks: groupItems)
                         Section {
                             DisclosureGroup(isExpanded: expansionBinding(for: group)) {
                                 if groupTasks.isEmpty {
@@ -127,6 +134,7 @@ struct TasksView: View {
                                     }
                                     .onDelete { indexSet in
                                         for index in indexSet {
+                                            NotificationManager.cancelReminder(for: groupTasks[index])
                                             modelContext.delete(groupTasks[index])
                                         }
                                     }
@@ -150,8 +158,28 @@ struct TasksView: View {
                     }
                 }
             }
+            .monogramWatermark()
             .navigationTitle("Tasks")
+            .searchable(text: $searchText, prompt: "Search tasks")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        ForEach(TaskFilter.allCases, id: \.self) { option in
+                            Button {
+                                filter = option
+                            } label: {
+                                if filter == option {
+                                    Label(option.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(option.rawValue)
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                    }
+                    .accessibilityLabel("Filter: \(filter.rawValue)")
+                }
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Section("Edit Groups") {
@@ -175,7 +203,23 @@ struct TasksView: View {
                         Image(systemName: "pencil.circle")
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showingScanList = true
+                    } label: {
+                        Image(systemName: "text.viewfinder")
+                    }
+                    .accessibilityLabel("Scan a list from a photo")
+                    NavigationLink {
+                        CalendarTasksView()
+                    } label: {
+                        Image(systemName: "calendar")
+                    }
+                    NavigationLink {
+                        ShoppingListView()
+                    } label: {
+                        Image(systemName: "cart")
+                    }
                     Button {
                         showingAddTask = true
                     } label: {
@@ -185,6 +229,21 @@ struct TasksView: View {
             }
             .sheet(isPresented: $showingAddTask) {
                 AddTaskView()
+            }
+            .sheet(isPresented: $showingScanList) {
+                ScanListView { proposals in
+                    for proposal in proposals {
+                        let task = TaskItem(
+                            title: proposal.title.trimmingCharacters(in: .whitespaces),
+                            dueDate: proposal.dueDate,
+                            hasTime: proposal.hasTime)
+                        modelContext.insert(task)
+                    }
+                    try? modelContext.save()
+                    for task in allTasks where !task.isCompleted {
+                        NotificationManager.scheduleReminder(for: task)
+                    }
+                }
             }
             .sheet(isPresented: $showingAddGroup) {
                 AddGroupView()
@@ -203,26 +262,52 @@ struct TasksView: View {
                 }
             }
         }
+        .tint(.accentTasks)
     }
 
     // MARK: - Helpers
 
     @ViewBuilder
-    private func taskSection(_ title: String, tasks: [TaskItem]) -> some View {
-        if !tasks.isEmpty {
-            Section(title) {
-                ForEach(tasks) { task in
+    private func taskSection(_ title: String, tasks: [TaskItem],
+                             headerColor: Color? = nil) -> some View {
+        let filtered = tasks.filter(matchesSearch)
+        if !filtered.isEmpty {
+            Section {
+                ForEach(filtered) { task in
                     TaskRowView(task: task)
                         .contentShape(Rectangle())
                         .onTapGesture { taskToEdit = task }
                 }
                 .onDelete { indexSet in
                     for index in indexSet {
-                        modelContext.delete(tasks[index])
+                        NotificationManager.cancelReminder(for: filtered[index])
+                        modelContext.delete(filtered[index])
                     }
                 }
+            } header: {
+                Text(title)
+                    .foregroundStyle(headerColor ?? Color.secondary)
             }
         }
+    }
+
+    private func matchesSearch(_ task: TaskItem) -> Bool {
+        searchText.isEmpty || task.title.localizedCaseInsensitiveContains(searchText)
+    }
+
+    /// One-line capture: parse date words out of the text and create the
+    /// task straight away ("Dentist tomorrow 3pm" → task titled "Dentist").
+    private func quickAdd() {
+        let input = quickAddText.trimmingCharacters(in: .whitespaces)
+        guard !input.isEmpty else { return }
+        let parsed = QuickAddParser.parse(input)
+        let task = TaskItem(title: parsed.title,
+                            dueDate: parsed.dueDate,
+                            hasTime: parsed.hasTime)
+        modelContext.insert(task)
+        try? modelContext.save()
+        NotificationManager.scheduleReminder(for: task)
+        quickAddText = ""
     }
 
     private func expansionBinding(for group: TaskGroup) -> Binding<Bool> {
@@ -238,11 +323,18 @@ struct TasksView: View {
         )
     }
 
-    private func groupStats(_ group: TaskGroup) -> (completed: Int, total: Int, progress: Double) {
-        let items = allTasks.filter { $0.group === group }
-        let completed = items.filter(\.isCompleted).count
-        let progress = items.isEmpty ? 0 : Double(completed) / Double(items.count)
-        return (completed, items.count, progress)
+    private struct GroupStats {
+        let completed: Int
+        let total: Int
+
+        init(tasks: [TaskItem]) {
+            completed = tasks.filter(\.isCompleted).count
+            total = tasks.count
+        }
+
+        var progress: Double {
+            total == 0 ? 0 : Double(completed) / Double(total)
+        }
     }
 
     /// A row background that fills left-to-right with the group's colour as

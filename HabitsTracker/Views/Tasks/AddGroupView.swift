@@ -33,7 +33,7 @@ struct AddGroupView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
-                        let group = TaskGroup(name: name, colorHex: color.toHex())
+                        let group = TaskGroup(name: name, colorHex: color.contrastClamped().toHex())
                         modelContext.insert(group)
                         dismiss()
                     }

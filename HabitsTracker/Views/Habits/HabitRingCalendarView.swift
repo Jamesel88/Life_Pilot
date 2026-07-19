@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 enum HabitWheelScope: String, CaseIterable {
     case week = "Weekly view"
@@ -14,6 +15,9 @@ struct HabitRingCalendarView: View {
     var referenceDate: Date
     var scope: HabitWheelScope
     var habits: [Habit]
+    /// When false the wheel is a read-only overview — month-scope wedges
+    /// are too small to be honest tap targets.
+    var interactive: Bool = true
     var onToggle: (Habit, Date) -> Void
 
     private var calendar: Calendar { .current }
@@ -107,9 +111,11 @@ struct HabitRingCalendarView: View {
                             .fill(done ? tint : tint.opacity(active ? 0.14 : 0.05))
                             .contentShape(cell)
                             .onTapGesture {
-                                guard active else { return }
+                                guard interactive, active else { return }
                                 onToggle(habit, day)
                             }
+                            .accessibilityLabel(
+                                "\(habit.name), \(day.formatted(.dateTime.month().day())), \(done ? "done" : "not done")")
                     }
                 }
 
@@ -159,7 +165,7 @@ struct HabitRingCalendarView: View {
                         .fill(color(for: index))
                         .frame(width: 6, height: 6)
                     Text(habit.name)
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(color(for: index))
                         .lineLimit(1)
                 }

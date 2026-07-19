@@ -1,27 +1,60 @@
 import SwiftUI
+import SwiftData
 
 struct TaskRowView: View {
+    @Environment(\.modelContext) private var modelContext
     @Bindable var task: TaskItem
 
     var body: some View {
         HStack {
-            Button {
-                task.isCompleted.toggle()
-            } label: {
-                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(task.isCompleted ? .green : .secondary)
+            // Priority at a glance: a quiet edge stripe instead of louder
+            // per-row treatments. Normal priority (and completed rows)
+            // stay unmarked.
+            if let stripe = priorityStripeColor {
+                Capsule()
+                    .fill(stripe)
+                    .frame(width: 3)
+                    .frame(maxHeight: .infinity)
             }
-            .buttonStyle(.plain)
 
-            VStack(alignment: .leading) {
-                Text(task.title)
-                    .strikethrough(task.isCompleted)
-                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
-                if task.hasTime {
+            CompletionToggleButton(isCompleted: task.isCompleted,
+                                   itemTitle: task.title) {
+                toggleCompletion()
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 4) {
+                    Text(task.title)
+                        .strikethrough(task.isCompleted)
+                        .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                    if task.repeatRule != .never {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if !task.notes.isEmpty {
+                    Text(task.notes)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                if let windowDescription = task.dueWindowDescription {
+                    Text("\(windowDescription) · by \(task.dueDate, format: .dateTime.day().month())")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if task.hasTime {
                     Text(task.dueDate, format: .dateTime.hour().minute())
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+                if !task.linkedTasks.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "link")
+                        Text("\(task.linkedTasks.count)")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
                 }
             }
 
@@ -37,6 +70,36 @@ struct TaskRowView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             }
+        }
+        .sensoryFeedback(.success, trigger: task.isCompleted) { _, isNowComplete in
+            isNowComplete
+        }
+    }
+
+    private var priorityStripeColor: Color? {
+        guard !task.isCompleted else { return nil }
+        switch task.priority {
+        case .urgent: return .red
+        case .high: return .orange
+        case .normal: return nil
+        case .low: return .gray
+        }
+    }
+
+    private func toggleCompletion() {
+        task.isCompleted.toggle()
+        task.completedAt = task.isCompleted ? .now : nil
+        if task.isCompleted {
+            NotificationManager.cancelReminder(for: task)
+            if let next = task.nextOccurrence() {
+                modelContext.insert(next)
+                // Save first so the new task's permanent ID backs its
+                // notification identifier
+                try? modelContext.save()
+                NotificationManager.scheduleReminder(for: next)
+            }
+        } else {
+            NotificationManager.scheduleReminder(for: task)
         }
     }
 }

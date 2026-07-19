@@ -6,11 +6,62 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6076B4413006D468002A0C8E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6076B4403006D468002A0C8E /* WidgetKit.framework */; };
+		6076B4433006D468002A0C8E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6076B4423006D468002A0C8E /* SwiftUI.framework */; };
+		6076B4503006D469002A0C8E /* CompartmentsWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6076B43E3006D468002A0C8E /* CompartmentsWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		6076B44E3006D469002A0C8E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 609589EF2FFA637800E2695E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6076B43D3006D468002A0C8E;
+			remoteInfo = CompartmentsWidgetsExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6076B4553006D469002A0C8E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6076B4503006D469002A0C8E /* CompartmentsWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		6076B43E3006D468002A0C8E /* CompartmentsWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CompartmentsWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6076B4403006D468002A0C8E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		6076B4423006D468002A0C8E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		609589F72FFA637800E2695E /* Life-Pilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Life-Pilot.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6076B4513006D469002A0C8E /* Exceptions for "CompartmentsWidgets" folder in "CompartmentsWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6076B43D3006D468002A0C8E /* CompartmentsWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		6076B4443006D468002A0C8E /* CompartmentsWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6076B4513006D469002A0C8E /* Exceptions for "CompartmentsWidgets" folder in "CompartmentsWidgetsExtension" target */,
+			);
+			path = CompartmentsWidgets;
+			sourceTree = "<group>";
+		};
 		609589F92FFA637800E2695E /* HabitsTracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = HabitsTracker;
@@ -19,6 +70,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		6076B43B3006D468002A0C8E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6076B4433006D468002A0C8E /* SwiftUI.framework in Frameworks */,
+				6076B4413006D468002A0C8E /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		609589F42FFA637800E2695E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -29,10 +89,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6076B43F3006D468002A0C8E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				6076B4403006D468002A0C8E /* WidgetKit.framework */,
+				6076B4423006D468002A0C8E /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		609589EE2FFA637800E2695E = {
 			isa = PBXGroup;
 			children = (
 				609589F92FFA637800E2695E /* HabitsTracker */,
+				6076B4443006D468002A0C8E /* CompartmentsWidgets */,
+				6076B43F3006D468002A0C8E /* Frameworks */,
 				609589F82FFA637800E2695E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +112,7 @@
 			isa = PBXGroup;
 			children = (
 				609589F72FFA637800E2695E /* Life-Pilot.app */,
+				6076B43E3006D468002A0C8E /* CompartmentsWidgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,6 +120,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		6076B43D3006D468002A0C8E /* CompartmentsWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6076B4523006D469002A0C8E /* Build configuration list for PBXNativeTarget "CompartmentsWidgetsExtension" */;
+			buildPhases = (
+				6076B43A3006D468002A0C8E /* Sources */,
+				6076B43B3006D468002A0C8E /* Frameworks */,
+				6076B43C3006D468002A0C8E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6076B4443006D468002A0C8E /* CompartmentsWidgets */,
+			);
+			name = CompartmentsWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = CompartmentsWidgetsExtension;
+			productReference = 6076B43E3006D468002A0C8E /* CompartmentsWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		609589F62FFA637800E2695E /* Life-Pilot */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 60958A042FFA637900E2695E /* Build configuration list for PBXNativeTarget "Life-Pilot" */;
@@ -55,10 +149,12 @@
 				609589F32FFA637800E2695E /* Sources */,
 				609589F42FFA637800E2695E /* Frameworks */,
 				609589F52FFA637800E2695E /* Resources */,
+				6076B4553006D469002A0C8E /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				6076B44F3006D469002A0C8E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				609589F92FFA637800E2695E /* HabitsTracker */,
@@ -80,6 +176,9 @@
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
+					6076B43D3006D468002A0C8E = {
+						CreatedOnToolsVersion = 26.6;
+					};
 					609589F62FFA637800E2695E = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -100,11 +199,19 @@
 			projectRoot = "";
 			targets = (
 				609589F62FFA637800E2695E /* Life-Pilot */,
+				6076B43D3006D468002A0C8E /* CompartmentsWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		6076B43C3006D468002A0C8E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		609589F52FFA637800E2695E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +222,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		6076B43A3006D468002A0C8E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		609589F32FFA637800E2695E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,7 +238,84 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		6076B44F3006D469002A0C8E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6076B43D3006D468002A0C8E /* CompartmentsWidgetsExtension */;
+			targetProxy = 6076B44E3006D469002A0C8E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		6076B4533006D469002A0C8E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = CompartmentsWidgets/CompartmentsWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 43335FY627;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CompartmentsWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CompartmentsWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = HabitsTrackerV1.HabitsTracker.CompartmentsWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6076B4543006D469002A0C8E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = CompartmentsWidgets/CompartmentsWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 43335FY627;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CompartmentsWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CompartmentsWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = HabitsTrackerV1.HabitsTracker.CompartmentsWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		60958A022FFA637900E2695E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -246,6 +437,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HabitsTracker/HabitsTracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 43335FY627;
@@ -254,7 +446,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Life-Pilot";
+				INFOPLIST_KEY_CFBundleDisplayName = Compartments;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -283,7 +475,6 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.5;
 			};
 			name = Debug;
 		};
@@ -292,6 +483,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HabitsTracker/HabitsTracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 43335FY627;
@@ -300,7 +492,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Life-Pilot";
+				INFOPLIST_KEY_CFBundleDisplayName = Compartments;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -329,13 +521,21 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.5;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		6076B4523006D469002A0C8E /* Build configuration list for PBXNativeTarget "CompartmentsWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6076B4533006D469002A0C8E /* Debug */,
+				6076B4543006D469002A0C8E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		609589F22FFA637800E2695E /* Build configuration list for PBXProject "HabitsTracker" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

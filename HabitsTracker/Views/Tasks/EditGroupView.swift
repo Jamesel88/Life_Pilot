@@ -20,7 +20,7 @@ struct EditGroupView: View {
                 TextField("Name (e.g. James, Louise, Work)", text: $group.name)
                 ColorPicker("Ring colour", selection: $color, supportsOpacity: false)
                     .onChange(of: color) { _, newValue in
-                        group.colorHex = newValue.toHex()
+                        group.colorHex = newValue.contrastClamped().toHex()
                     }
 
                 Section("Preview") {

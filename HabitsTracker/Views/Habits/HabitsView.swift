@@ -7,11 +7,28 @@ struct HabitsView: View {
     @State private var habitToEdit: Habit?
     @State private var showingAddHabit = false
     @State private var referenceDate = Date()
-    @State private var scope: HabitWheelScope = .month
+    // Week is the default: 7 fat wedges are comfortably tappable, whereas
+    // the month wheel's 30+ slivers are read-only (see below)
+    @State private var scope: HabitWheelScope = .week
+    @State private var showingCelebration = false
 
     private var calendar: Calendar { .current }
 
     var body: some View {
+        ZStack {
+            habitsNavigationStack
+
+            if showingCelebration {
+                HabitCelebrationOverlay {
+                    showingCelebration = false
+                }
+                .zIndex(1)
+            }
+        }
+        .sensoryFeedback(.success, trigger: showingCelebration) { _, newValue in newValue }
+    }
+
+    private var habitsNavigationStack: some View {
         NavigationStack {
             List {
                 // MARK: Scope menu
@@ -65,9 +82,17 @@ struct HabitsView: View {
                         .buttonStyle(.borderless)
 
                         HabitRingCalendarView(referenceDate: referenceDate, scope: scope,
-                                              habits: habits, onToggle: toggleHabit)
+                                              habits: habits,
+                                              interactive: scope == .week,
+                                              onToggle: toggleHabit)
                             .frame(height: 340)
                             .frame(maxWidth: .infinity)
+
+                        if scope == .month {
+                            Text("Overview — switch to Weekly view to log days")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
 
                         if habits.count > 10 {
                             Text("Showing the first 10 habits on the wheel")
@@ -82,15 +107,11 @@ struct HabitsView: View {
                 Section("All habits") {
                     ForEach(habits) { habit in
                         HStack {
-                            Button {
+                            CompletionToggleButton(isCompleted: isDone(habit),
+                                                   tint: .accentHabits,
+                                                   itemTitle: habit.name) {
                                 toggle(habit)
-                            } label: {
-                                Image(systemName: isDone(habit)
-                                      ? "checkmark.circle.fill" : "circle")
-                                    .font(.title3)
-                                    .foregroundStyle(isDone(habit) ? .orange : .secondary)
                             }
-                            .buttonStyle(.plain)
 
                             VStack(alignment: .leading) {
                                 Text(habit.name)
@@ -111,6 +132,7 @@ struct HabitsView: View {
                     }
                 }
             }
+            .monogramWatermark()
             .navigationTitle("Habits")
             .toolbar {
                 Button {
@@ -133,6 +155,7 @@ struct HabitsView: View {
                 }
             }
         }
+        .tint(.accentHabits)
     }
 
     // MARK: - Helpers
@@ -146,13 +169,21 @@ struct HabitsView: View {
     }
 
     private func toggleHabit(_ habit: Habit, on day: Date) {
-        if habit.isCompleted(on: day) {
-            habit.completedDates.removeAll {
-                calendar.isDate($0, equalTo: day, toGranularity: habit.granularity)
-            }
-        } else {
-            habit.completedDates.append(day)
+        let isToday = calendar.isDateInToday(day)
+        let wasAllComplete = isToday && allHabitsCompleteToday
+
+        habit.toggleCompletion(on: day, calendar: calendar)
+
+        if isToday && !wasAllComplete && allHabitsCompleteToday {
+            showingCelebration = true
         }
+    }
+
+    /// True only once every currently-active habit is done for today —
+    /// used to fire the celebration exactly on the moment it first happens.
+    private var allHabitsCompleteToday: Bool {
+        let active = habits.filter { $0.isActive(on: .now) }
+        return !active.isEmpty && active.allSatisfy { $0.isCompleted(on: .now) }
     }
 
     private func changePeriod(_ delta: Int) {

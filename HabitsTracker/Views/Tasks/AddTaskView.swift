@@ -4,12 +4,15 @@ import SwiftData
 struct AddTaskView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query private var groups: [TaskGroup]
 
     @State private var title = ""
+    @State private var notes = ""
     @State private var dueDate = Date()
     @State private var hasTime = false
+    @State private var dueWindow: DueWindow = .day
+    @State private var periodStart: Date = .now
     @State private var priority: Priority = .normal
+    @State private var repeatRule: TaskRepeat = .never
     @State private var selectedGroup: TaskGroup?
 
     // For creating a new colour code inline
@@ -22,10 +25,49 @@ struct AddTaskView: View {
                     TextField("What needs doing?", text: $title)
                 }
 
+                Section("Notes") {
+                    TextField("Anything else worth noting?",
+                              text: $notes, axis: .vertical)
+                        .lineLimit(3...8)
+                }
+
                 Section("When") {
-                    DatePicker("Date", selection: $dueDate,
-                               displayedComponents: hasTime ? [.date, .hourAndMinute] : [.date])
-                    Toggle("Specific time", isOn: $hasTime)
+                    Picker("When", selection: $dueWindow.animation()) {
+                        ForEach(DueWindow.allCases, id: \.self) { window in
+                            Text(window.segmentLabel).tag(window)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    if dueWindow == .day {
+                        DatePicker("Date", selection: $dueDate,
+                                   displayedComponents: hasTime ? [.date, .hourAndMinute] : [.date])
+                        Toggle("Specific time", isOn: $hasTime)
+                    } else {
+                        if dueWindow == .week || dueWindow == .month {
+                            DuePeriodPicker(window: dueWindow, selection: $periodStart)
+                        }
+                        if let anchor = dueWindow.anchorDate(from: periodStart) {
+                            LabeledContent("Due by") {
+                                Text(anchor, format: .dateTime.weekday().day().month())
+                            }
+                        }
+                    }
+                }
+                .onChange(of: dueWindow) { _, newValue in
+                    // Reset to the current period when switching windows
+                    if let component = newValue.calendarComponent {
+                        periodStart = Calendar.current
+                            .dateInterval(of: component, for: .now)?.start ?? .now
+                    }
+                }
+
+                Section("Repeat") {
+                    Picker("Repeat", selection: $repeatRule) {
+                        ForEach(TaskRepeat.allCases, id: \.self) { rule in
+                            Text(rule.label).tag(rule)
+                        }
+                    }
                 }
 
                 Section("Priority") {
@@ -38,18 +80,7 @@ struct AddTaskView: View {
                 }
 
                 Section("Group") {
-                    Picker("Group", selection: $selectedGroup) {
-                        Text("None").tag(TaskGroup?.none)
-                        ForEach(groups) { group in
-                            HStack {
-                                Circle()
-                                    .fill(Color(hex: group.colorHex))
-                                    .frame(width: 10, height: 10)
-                                Text(group.name)
-                            }
-                            .tag(Optional(group))
-                        }
-                    }
+                    GroupPicker(selection: $selectedGroup)
                     Button("Create New Group") { showingNewGroup = true }
                 }
             }
@@ -61,10 +92,17 @@ struct AddTaskView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") {
-                        let task = TaskItem(title: title, dueDate: dueDate,
-                                            hasTime: hasTime, priority: priority,
-                                            group: selectedGroup)
+                        let task = TaskItem(
+                            title: title,
+                            dueDate: dueWindow.anchorDate(from: periodStart) ?? dueDate,
+                            hasTime: dueWindow == .day && hasTime,
+                            dueWindow: dueWindow,
+                            priority: priority,
+                            group: selectedGroup, repeatRule: repeatRule)
+                        task.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
                         modelContext.insert(task)
+                        try? modelContext.save()
+                        NotificationManager.scheduleReminder(for: task)
                         dismiss()
                     }
                     .disabled(title.isEmpty)
