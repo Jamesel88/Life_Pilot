@@ -6,6 +6,9 @@ struct HabitsTrackerApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var showLaunchIntro = true
     @AppStorage("appAppearance") private var appearance: AppAppearance = .dark
+    /// Once ever: flips true the first time the walkthrough finishes (or
+    /// is skipped) and never shows again
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some Scene {
         WindowGroup {
@@ -14,6 +17,13 @@ struct HabitsTrackerApp: App {
                     LaunchIntroView {
                         withAnimation(.easeOut(duration: 0.4)) {
                             showLaunchIntro = false
+                        }
+                    }
+                    .transition(.opacity)
+                } else if !hasCompletedOnboarding {
+                    OnboardingView {
+                        withAnimation(.easeOut(duration: 0.4)) {
+                            hasCompletedOnboarding = true
                         }
                     }
                     .transition(.opacity)
@@ -28,8 +38,9 @@ struct HabitsTrackerApp: App {
             .preferredColorScheme(appearance.colorScheme)
             .onChange(of: scenePhase) { _, phase in
                 // Hand the widgets fresh numbers whenever the app leaves
-                // the foreground
-                if phase == .background {
+                // the foreground (.inactive catches locks and the app
+                // switcher, not just the home swipe)
+                if phase == .background || phase == .inactive {
                     WidgetBridge.writeSnapshot(container: Self.sharedModelContainer)
                 }
             }

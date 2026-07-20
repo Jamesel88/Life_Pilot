@@ -16,6 +16,9 @@ struct WidgetSnapshot: Codable {
     // Optional so snapshots written before the shopping feature still decode
     var shoppingChecked: Int?
     var shoppingTotal: Int?
+    /// Mirrors the in-app appearance setting ("system"/"light"/"dark") so
+    /// widgets match the app rather than the system
+    var appearance: String?
     var boxes: [BoxSnapshot]
 
     struct BoxSnapshot: Codable {
@@ -58,6 +61,11 @@ enum WidgetBridge {
             habitsTotal: activeHabits.count,
             shoppingChecked: shoppingItems.filter(\.isChecked).count,
             shoppingTotal: shoppingItems.count,
+            // @AppStorage never persists its coded default (.dark), so an
+            // untouched setting reads nil here — fall back to the same
+            // default the app itself renders with
+            appearance: UserDefaults.standard.string(forKey: "appAppearance")
+                ?? AppAppearance.dark.rawValue,
             boxes: boxes.map {
                 WidgetSnapshot.BoxSnapshot(name: $0.name,
                                            completed: $0.completedCount,

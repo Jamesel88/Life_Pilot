@@ -21,6 +21,8 @@ struct WidgetSnapshot: Codable {
     // Optional so snapshots written before the shopping feature still decode
     var shoppingChecked: Int?
     var shoppingTotal: Int?
+    /// Mirrors the in-app appearance setting ("system"/"light"/"dark")
+    var appearance: String?
     var boxes: [BoxSnapshot]
 
     struct BoxSnapshot: Codable {
@@ -43,6 +45,27 @@ private func loadSnapshot() -> WidgetSnapshot? {
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
     return try? decoder.decode(WidgetSnapshot.self, from: data)
+}
+
+private extension View {
+    /// Force the widget into the app's chosen appearance. The background
+    /// is an explicit colour (not a system material) so it can't fall back
+    /// to the home screen's traits; the colour-scheme override keeps
+    /// primary/secondary text legible on it. "system" (or an old snapshot
+    /// without the field) keeps following the home screen.
+    @ViewBuilder
+    func widgetChrome(_ raw: String?) -> some View {
+        switch raw {
+        case "dark":
+            containerBackground(Color(red: 0.11, green: 0.11, blue: 0.125), for: .widget)
+                .environment(\.colorScheme, .dark)
+        case "light":
+            containerBackground(Color(red: 0.95, green: 0.95, blue: 0.96), for: .widget)
+                .environment(\.colorScheme, .light)
+        default:
+            containerBackground(.fill.tertiary, for: .widget)
+        }
+    }
 }
 
 private extension Color {
@@ -238,7 +261,7 @@ struct TodayRingsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "TodayRingsWidget", provider: SnapshotProvider()) { entry in
             TodayRingsView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .widgetChrome(entry.snapshot?.appearance)
         }
         .configurationDisplayName("Today's Progress")
         .description("Today's tasks and habits as a compartment tray that seals when you're done.")
@@ -417,7 +440,7 @@ struct CompartmentBoxWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "CompartmentBoxWidget", provider: SnapshotProvider()) { entry in
             CompartmentBoxWidgetView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .widgetChrome(entry.snapshot?.appearance)
         }
         .configurationDisplayName("Compartment Boxes")
         .description("Watch your boxes fill up as you complete their compartments.")

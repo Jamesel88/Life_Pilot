@@ -72,7 +72,24 @@ struct InsightsView: View {
             }
 
             // MARK: Habits
-            Section("Habits — last 30 days") {
+            Section("Habit streak") {
+                if habits.isEmpty {
+                    Text("No habits yet")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    let index = HabitCompletionIndex(habits: habits)
+                    StreakHistoryView(dayCompletion: index.dayCompletion(on:))
+                    statRow("Current streak",
+                            value: "\(index.currentStreak()) days",
+                            color: .accentHabits)
+                    statRow("Best streak",
+                            value: "\(index.longestStreak()) days",
+                            color: .accentHabits)
+                }
+            }
+
+            Section("Habit consistency — last 30 days") {
                 if habits.isEmpty {
                     Text("No habits yet")
                         .font(.subheadline)

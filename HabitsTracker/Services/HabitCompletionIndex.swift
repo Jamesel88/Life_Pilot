@@ -62,4 +62,50 @@ struct HabitCompletionIndex {
         if doneCount == active.count { return .full }
         return .partial
     }
+
+    // MARK: - Streaks
+
+    private func hasActiveHabits(on day: Date) -> Bool {
+        habits.contains { $0.isActive(on: day) }
+    }
+
+    /// Consecutive fully-completed days ending today. An unfinished today
+    /// doesn't break the streak — there's still time.
+    func currentStreak(now: Date = .now) -> Int {
+        var streak = 0
+        var day = now
+        if dayCompletion(on: day) != .full {
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: day)
+            else { return 0 }
+            day = yesterday
+        }
+        while hasActiveHabits(on: day) && dayCompletion(on: day) == .full {
+            streak += 1
+            guard let previous = calendar.date(byAdding: .day, value: -1, to: day)
+            else { break }
+            day = previous
+        }
+        return streak
+    }
+
+    /// The best run of fully-completed days since the earliest habit began.
+    func longestStreak(now: Date = .now) -> Int {
+        guard let earliestStart = habits.map(\.startDate).min() else { return 0 }
+        var longest = 0
+        var running = 0
+        var day = earliestStart
+        while day <= now {
+            if hasActiveHabits(on: day) {
+                if dayCompletion(on: day) == .full {
+                    running += 1
+                    longest = max(longest, running)
+                } else {
+                    running = 0
+                }
+            }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+        return max(longest, currentStreak(now: now))
+    }
 }

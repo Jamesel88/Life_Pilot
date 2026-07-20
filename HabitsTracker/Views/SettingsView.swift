@@ -47,6 +47,7 @@ struct BackupDocument: FileDocument {
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage("appAppearance") private var appearance: AppAppearance = .dark
+    @AppStorage("userName") private var userName = ""
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
 
     // Back up & restore state
@@ -60,6 +61,13 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    TextField("Your name", text: $userName)
+                        .textContentType(.givenName)
+                } footer: {
+                    Text("Used for the greeting on your Today page.")
+                }
+
                 Section("Appearance") {
                     Picker("Appearance", selection: $appearance) {
                         ForEach(AppAppearance.allCases, id: \.self) { option in
@@ -117,6 +125,7 @@ struct SettingsView: View {
                 }
             }
             .monogramWatermark()
+            .compartmentsTabBar()
             .navigationTitle("Settings")
         }
         .task {

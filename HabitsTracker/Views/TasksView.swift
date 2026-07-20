@@ -159,6 +159,7 @@ struct TasksView: View {
                 }
             }
             .monogramWatermark()
+            .compartmentsTabBar()
             .navigationTitle("Tasks")
             .searchable(text: $searchText, prompt: "Search tasks")
             .toolbar {

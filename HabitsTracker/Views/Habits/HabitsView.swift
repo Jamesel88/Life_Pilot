@@ -133,6 +133,7 @@ struct HabitsView: View {
                 }
             }
             .monogramWatermark()
+            .compartmentsTabBar()
             .navigationTitle("Habits")
             .toolbar {
                 Button {

@@ -26,6 +26,7 @@ struct TaskBoxesView: View {
                 .padding()
             }
             .monogramWatermark(base: Color(.systemBackground))
+            .compartmentsTabBar()
             .navigationTitle("Compartments")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
