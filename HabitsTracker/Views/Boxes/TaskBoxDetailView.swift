@@ -16,12 +16,12 @@ struct TaskBoxDetailView: View {
     @State private var showingEditBox = false
 
     private var sortedSubtasks: [BoxSubtask] {
-        box.subtasks.sorted { $0.createdAt < $1.createdAt }
+        box.allSubtasks.sorted { $0.createdAt < $1.createdAt }
     }
 
     private var availableTasks: [TaskItem] {
         allTasks.filter { candidate in
-            !box.linkedTasks.contains(where: { $0 === candidate })
+            !box.allLinkedTasks.contains(where: { $0 === candidate })
         }
     }
 
@@ -88,7 +88,7 @@ struct TaskBoxDetailView: View {
 
             // MARK: Linked tasks
             Section("Linked tasks") {
-                ForEach(box.linkedTasks) { task in
+                ForEach(box.allLinkedTasks) { task in
                     HStack {
                         Image(systemName: "link")
                             .font(.caption)
@@ -127,7 +127,8 @@ struct TaskBoxDetailView: View {
             NavigationStack {
                 List(availableTasks) { candidate in
                     Button {
-                        box.linkedTasks.append(candidate)
+                        if box.linkedTasks == nil { box.linkedTasks = [] }
+                        box.linkedTasks?.append(candidate)
                         showingLinkPicker = false
                     } label: {
                         TaskRowView(task: candidate)
@@ -162,7 +163,7 @@ struct TaskBoxDetailView: View {
     }
 
     private func unlink(_ task: TaskItem) {
-        box.linkedTasks.removeAll { $0 === task }
+        box.linkedTasks?.removeAll { $0 === task }
     }
 }
 
@@ -200,10 +201,10 @@ struct SubtaskRowView: View {
                         }
                         .foregroundStyle(subtask.isOverdue ? .red : .secondary)
                     }
-                    if !subtask.photos.isEmpty {
+                    if !(subtask.photos ?? []).isEmpty {
                         HStack(spacing: 3) {
                             Image(systemName: "photo")
-                            Text("\(subtask.photos.count)")
+                            Text("\((subtask.photos ?? []).count)")
                         }
                         .foregroundStyle(.secondary)
                     }

@@ -31,7 +31,7 @@ struct WidgetSnapshot: Codable {
 
 @MainActor
 enum WidgetBridge {
-    static let appGroupID = "group.HabitsTrackerV1.HabitsTracker"
+    static let appGroupID = "group.com.jameslane.compartments"
     static let snapshotFilename = "widget-snapshot.json"
 
     static func writeSnapshot(container: ModelContainer) {

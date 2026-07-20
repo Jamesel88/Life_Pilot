@@ -33,7 +33,7 @@ struct WidgetSnapshot: Codable {
     }
 }
 
-private let appGroupID = "group.HabitsTrackerV1.HabitsTracker"
+private let appGroupID = "group.com.jameslane.compartments"
 private let snapshotFilename = "widget-snapshot.json"
 
 private func loadSnapshot() -> WidgetSnapshot? {

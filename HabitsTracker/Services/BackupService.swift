@@ -124,7 +124,7 @@ enum BackupService {
                        priority: task.priority, isCompleted: task.isCompleted,
                        repeatRule: task.repeatRule,
                        groupID: task.group.flatMap { groupIDs[$0.persistentModelID] },
-                       linkedTaskIDs: task.linkedTasks.compactMap { taskIDs[$0.persistentModelID] },
+                       linkedTaskIDs: task.allLinkedTasks.compactMap { taskIDs[$0.persistentModelID] },
                        notes: task.notes,
                        completedAt: task.completedAt)
         }
@@ -140,8 +140,8 @@ enum BackupService {
             BoxBackup(name: box.name, colorHex: box.colorHex,
                       createdAt: box.createdAt,
                       groupID: box.group.flatMap { groupIDs[$0.persistentModelID] },
-                      linkedTaskIDs: box.linkedTasks.compactMap { taskIDs[$0.persistentModelID] },
-                      subtasks: box.subtasks
+                      linkedTaskIDs: box.allLinkedTasks.compactMap { taskIDs[$0.persistentModelID] },
+                      subtasks: box.allSubtasks
                           .sorted { $0.createdAt < $1.createdAt }
                           .map { subtask in
                               SubtaskBackup(title: subtask.title,
@@ -149,7 +149,7 @@ enum BackupService {
                                             createdAt: subtask.createdAt,
                                             dueDate: subtask.dueDate,
                                             notes: subtask.notes,
-                                            photos: subtask.photos
+                                            photos: (subtask.photos ?? [])
                                                 .sorted { $0.createdAt < $1.createdAt }
                                                 .map(\.data))
                           })

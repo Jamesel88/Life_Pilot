@@ -11,12 +11,10 @@ class TaskBox {
     var createdAt: Date = Date.now
     var group: TaskGroup?      // same colour codes used by tasks
     @Relationship(deleteRule: .cascade, inverse: \BoxSubtask.box)
-    var subtasks: [BoxSubtask] = []
-    /// Existing tasks pulled into this box via the "Link a task" button.
-    /// No declared inverse, so SwiftData nullifies dangling references
-    /// automatically when a linked task is deleted (same convention as
-    /// TaskItem.linkedTasks).
-    var linkedTasks: [TaskItem] = []
+    var subtasks: [BoxSubtask]?
+    /// Existing tasks pulled into this box via the "Link a task" button
+    @Relationship(inverse: \TaskItem.containingBoxes)
+    var linkedTasks: [TaskItem]?
 
     init(name: String, colorHex: String, group: TaskGroup? = nil) {
         self.name = name
@@ -30,15 +28,18 @@ extension TaskBox {
     /// assigned, otherwise its own picked colour.
     var displayColorHex: String { group?.colorHex ?? colorHex }
 
-    var totalCount: Int { subtasks.count + linkedTasks.count }
+    var allSubtasks: [BoxSubtask] { subtasks ?? [] }
+    var allLinkedTasks: [TaskItem] { linkedTasks ?? [] }
+
+    var totalCount: Int { allSubtasks.count + allLinkedTasks.count }
 
     /// A box with nothing in it yet — drawn ajar with a dashed outline so
     /// it reads as "waiting to be filled", not "sealed and done".
     var isEmpty: Bool { totalCount == 0 }
 
     var completedCount: Int {
-        subtasks.filter(\.isCompleted).count
-            + linkedTasks.filter(\.isCompleted).count
+        allSubtasks.filter(\.isCompleted).count
+            + allLinkedTasks.filter(\.isCompleted).count
     }
 
     /// How full the box is drawn: 0 when nothing done, 1 when everything is.
@@ -62,7 +63,7 @@ class BoxSubtask {
     var notes: String = ""     // free-text extra info
     var box: TaskBox?
     @Relationship(deleteRule: .cascade, inverse: \SubtaskPhoto.subtask)
-    var photos: [SubtaskPhoto] = []
+    var photos: [SubtaskPhoto]?
 
     init(title: String, dueDate: Date? = nil) {
         self.title = title

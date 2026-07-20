@@ -1,30 +1,39 @@
-# TODO / later development
+# TODO / release checklist
 
-## Enable CloudKit sync
+## CloudKit sync — code DONE, two Xcode steps remain
 
-Right now the app is local-only (`ModelConfiguration` in `HabitsTrackerApp.swift`
-has no `cloudKitDatabase`). To turn on cross-device sync:
+The schema is CloudKit-compatible (all relationships optional with proper
+inverses), the bundle ID is now `com.jameslane.compartments`, and the app
+group is `group.com.jameslane.compartments`. To turn sync on:
 
-1. In Xcode, select the `HabitsTracker` target → **Signing & Capabilities** →
-   **+ Capability** → add **iCloud** → check **CloudKit**. This registers an
-   iCloud container against your Apple Developer account and regenerates the
-   entitlements file automatically — don't hand-write it, let Xcode do it.
-2. In `HabitsTrackerApp.swift`, change the `sharedModelContainer`'s
-   `ModelConfiguration(schema: schema)` to
-   `ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)`.
-3. Build once on a device signed into iCloud to confirm the container
-   provisions correctly (CloudKit containers can take a few minutes to
-   appear as "ready" after first creation).
+1. In Xcode select the **Life-Pilot** target → Signing & Capabilities:
+   - Make sure your PAID developer team is selected under Signing (both
+     targets). Automatic signing will re-register the app group.
+   - **+ Capability → iCloud** → tick **CloudKit** → add container
+     `iCloud.com.jameslane.compartments`.
+2. In `HabitsTrackerApp.swift`, flip `cloudKitSyncEnabled` to `true`.
+3. Build & run on a device signed into iCloud; give the first sync a few
+   minutes. Verify data appears on a second device/simulator with the
+   same Apple ID.
 
-Note: this was attempted once already (entitlements file + `CODE_SIGN_ENTITLEMENTS`
-build setting) and reverted, because doing it outside Xcode's own capability
-flow risks a code-signing failure — the entitlement has to be paired with an
-Apple Developer Portal registration, which only Xcode's signed-in flow can do.
+Note: the bundle ID change means the app installs as a NEW app on your
+test devices — export a backup from the old install (Settings → Export
+Backup) and import it into the new one, then delete the old app.
 
-## Other things noted during the market-comparison review, not yet done
+## Remaining before App Store submission
 
-- Widgets (home/lock screen) — needs a Widget Extension target created in
-  Xcode first (can't be done from the CLI/agent side); once that exists, the
-  ring-based visuals here are a natural fit for a widget.
-- Subtasks / checklists on tasks — user has a separate idea for this, not
-  scoped yet.
+- [ ] Check the name "Compartments" is free in App Store Connect; create
+      the app record with bundle ID com.jameslane.compartments
+- [ ] Privacy policy + support URLs (privacy story: "Data Not Collected")
+- [ ] `ITSAppUsesNonExemptEncryption = NO` in target build settings
+- [ ] Screenshots (lead with compartment boxes + scan-a-list)
+- [ ] TestFlight round with real users before public release
+
+## Later / v1.x
+
+- Widgets for iPad sizes; watch app
+- EventKit overlay on the calendar view; NSCalendarsFullAccessUsageDescription
+- Per-weekday habits and quantity goals ("8 glasses")
+- AI "unpack this box" (decision pending: hosted key vs user-supplied)
+- Shared lists via CloudKit sharing
+- Unit-test target for date/window logic (dueBucket, anchorDate, streaks)

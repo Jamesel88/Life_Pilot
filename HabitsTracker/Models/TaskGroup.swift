@@ -4,7 +4,8 @@ import SwiftData
 class TaskGroup {
     var name: String = ""
     var colorHex: String = "888888"
-    @Relationship(deleteRule: .cascade) var tasks: [TaskItem] = []
+    @Relationship(deleteRule: .cascade, inverse: \TaskItem.group)
+    var tasks: [TaskItem]?
 
     init(name: String, colorHex: String) {
         self.name = name

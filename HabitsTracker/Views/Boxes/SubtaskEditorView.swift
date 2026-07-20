@@ -26,7 +26,7 @@ struct SubtaskEditorView: View {
         _notes = State(initialValue: subtask?.notes ?? "")
         _hasDueDate = State(initialValue: subtask?.dueDate != nil)
         _dueDate = State(initialValue: subtask?.dueDate ?? .now)
-        let existing = subtask?.photos.sorted { $0.createdAt < $1.createdAt } ?? []
+        let existing = (subtask?.photos ?? []).sorted { $0.createdAt < $1.createdAt }
         _photosData = State(initialValue: existing.map(\.data))
     }
 
@@ -144,7 +144,7 @@ struct SubtaskEditorView: View {
         // unchanged photos, delete removed ones, insert only new ones —
         // so untouched image blobs aren't rewritten on every save.
         var pending = photosData
-        for photo in target.photos.sorted(by: { $0.createdAt < $1.createdAt }) {
+        for photo in (target.photos ?? []).sorted(by: { $0.createdAt < $1.createdAt }) {
             if let index = pending.firstIndex(of: photo.data) {
                 pending.remove(at: index)
             } else {

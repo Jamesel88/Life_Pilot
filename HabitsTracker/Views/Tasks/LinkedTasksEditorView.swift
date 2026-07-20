@@ -11,14 +11,14 @@ struct LinkedTasksEditorView: View {
 
     private var availableTasks: [TaskItem] {
         allTasks.filter { candidate in
-            candidate !== task && !task.linkedTasks.contains(where: { $0 === candidate })
+            candidate !== task && !task.allLinkedTasks.contains(where: { $0 === candidate })
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if !task.linkedTasks.isEmpty {
-                ForEach(task.linkedTasks) { linked in
+            if !task.allLinkedTasks.isEmpty {
+                ForEach(task.allLinkedTasks) { linked in
                     HStack {
                         Image(systemName: "link")
                             .foregroundStyle(.secondary)

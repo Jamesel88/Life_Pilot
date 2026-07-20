@@ -127,19 +127,27 @@ extension TaskItem {
 // MARK: - Linking
 
 extension TaskItem {
-    /// Task links are symmetric by convention — always mutate both sides
-    /// through these helpers so opening either task shows the connection.
-    func link(to other: TaskItem) {
-        if !linkedTasks.contains(where: { $0 === other }) {
-            linkedTasks.append(other)
-        }
-        if !other.linkedTasks.contains(where: { $0 === self }) {
-            other.linkedTasks.append(self)
+    /// Both directions of the link relationship, merged and deduplicated —
+    /// the only correct way to read a task's links (a link is stored on
+    /// whichever side created it; SwiftData maintains the inverse).
+    var allLinkedTasks: [TaskItem] {
+        var seen = Set<PersistentIdentifier>()
+        return ((linkedTasks ?? []) + (linkedBy ?? [])).filter {
+            seen.insert($0.persistentModelID).inserted
         }
     }
 
+    /// Links are symmetric to the user; storage-wise the edge lives on
+    /// this task and SwiftData writes the inverse on `other`.
+    func link(to other: TaskItem) {
+        guard !allLinkedTasks.contains(where: { $0 === other }) else { return }
+        if linkedTasks == nil { linkedTasks = [] }
+        linkedTasks?.append(other)
+    }
+
+    /// The edge may live on either side — clear both.
     func unlink(from other: TaskItem) {
-        linkedTasks.removeAll { $0 === other }
-        other.linkedTasks.removeAll { $0 === self }
+        linkedTasks?.removeAll { $0 === other }
+        linkedBy?.removeAll { $0 === other }
     }
 }

@@ -48,10 +48,10 @@ struct TaskRowView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                if !task.linkedTasks.isEmpty {
+                if !task.allLinkedTasks.isEmpty {
                     HStack(spacing: 3) {
                         Image(systemName: "link")
-                        Text("\(task.linkedTasks.count)")
+                        Text("\(task.allLinkedTasks.count)")
                     }
                     .font(.caption2)
                     .foregroundStyle(.secondary)

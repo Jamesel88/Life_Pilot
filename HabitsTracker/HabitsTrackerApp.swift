@@ -48,14 +48,21 @@ struct HabitsTrackerApp: App {
         .modelContainer(Self.sharedModelContainer)
     }
 
-    /// Local-only for now — see TODO.md for what's needed to switch this
-    /// to `cloudKitDatabase: .automatic` and sync across devices. Not
-    /// private — App Intents (Siri/Shortcuts) need to reach it too.
+    /// Flip to true ONLY after adding the iCloud → CloudKit capability to
+    /// the Life-Pilot target in Xcode (container iCloud.com.jameslane.compartments).
+    /// The schema is already CloudKit-compatible (all relationships
+    /// optional with inverses). With the flag false the store stays
+    /// local-only, exactly as before.
+    static let cloudKitSyncEnabled = false
+
+    /// Not private — App Intents (Siri/Shortcuts) need to reach it too.
     static let sharedModelContainer: ModelContainer = {
         let schema = Schema([Habit.self, TaskGroup.self, TaskItem.self,
                              TaskBox.self, BoxSubtask.self, SubtaskPhoto.self,
                              ShoppingItem.self])
-        let configuration = ModelConfiguration(schema: schema)
+        let configuration = cloudKitSyncEnabled
+            ? ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)
+            : ModelConfiguration(schema: schema)
         do {
             return try ModelContainer(for: schema, configurations: [configuration])
         } catch {

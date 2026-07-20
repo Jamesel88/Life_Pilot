@@ -95,11 +95,17 @@ class TaskItem {
     var priority: Priority = Priority.normal
     var isCompleted: Bool = false
     var group: TaskGroup?      // which ring this counts toward
-    /// Other tasks this one is linked to (dependencies/related work).
-    /// Symmetric by convention — linking always updates both sides — with
-    /// no declared inverse, so SwiftData still nullifies dangling
-    /// references automatically when a linked task is deleted.
-    var linkedTasks: [TaskItem] = []
+    /// Task-to-task links (dependencies/related work). CloudKit requires
+    /// every relationship to be optional and have an inverse, so a
+    /// symmetric link is stored on ONE side only (`link(to:)` appends
+    /// here; SwiftData maintains `linkedBy` on the other task). Read
+    /// `allLinkedTasks` — never these two directly — to see both
+    /// directions merged.
+    @Relationship(inverse: \TaskItem.linkedBy)
+    var linkedTasks: [TaskItem]?
+    var linkedBy: [TaskItem]?
+    /// Inverse of TaskBox.linkedTasks — the boxes this task is linked into
+    var containingBoxes: [TaskBox]?
     var repeatRule: TaskRepeat = TaskRepeat.never
 
     init(title: String, dueDate: Date, hasTime: Bool = false,
