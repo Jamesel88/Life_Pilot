@@ -33,22 +33,10 @@ struct DashboardView: View {
         }
     }
 
-    /// Completed ÷ total for today's tasks (the outer green ring)
-    private var todayTasksProgress: Double {
-        guard !todayTasks.isEmpty else { return 0 }
-        return Double(todayCompletedCount) / Double(todayTasks.count)
-    }
-
     /// Every task, regardless of due date, that hasn't been completed yet
     private var allOutstandingTasks: [TaskItem] {
         allTasks.filter { !$0.isCompleted }
             .sorted { $0.dueDate < $1.dueDate }
-    }
-
-    /// Completed ÷ total across every task ever (the inner blue ring)
-    private var allTasksProgress: Double {
-        guard !allTasks.isEmpty else { return 0 }
-        return Double(allTasks.filter(\.isCompleted).count) / Double(allTasks.count)
     }
 
     // MARK: - Habit helpers
@@ -61,11 +49,6 @@ struct DashboardView: View {
         activeHabits.filter { index.isCompleted($0, on: .now) }.count
     }
 
-    private func habitsProgress(_ index: HabitCompletionIndex) -> Double {
-        guard !activeHabits.isEmpty else { return 0 }
-        return Double(habitsDoneToday(index)) / Double(activeHabits.count)
-    }
-
     // MARK: - Body
 
     var body: some View {
@@ -76,8 +59,10 @@ struct DashboardView: View {
                 let habitIndex = HabitCompletionIndex(habits: habits)
                 VStack(spacing: 20) {
 
-                    // MARK: Shopping list ring — tap goes straight to the list
-                    if !shoppingItems.isEmpty {
+                    // MARK: Shopping list ring — tap goes straight to the
+                    // list. Gone once everything's bought, not just when
+                    // the list is cleared.
+                    if shoppingItems.contains(where: { !$0.isChecked }) {
                         let purchased = shoppingItems.filter(\.isChecked).count
                         NavigationLink {
                             ShoppingListView()
@@ -214,33 +199,17 @@ struct DashboardView: View {
                             .frame(maxWidth: .infinity)
                     }
 
-                    // MARK: Overview rings — labelled in place, no legend needed
-                    VStack(spacing: 16) {
-                        ZStack {
-                            RingView(progress: todayTasksProgress,
-                                     color: .accentTasks, lineWidth: 14)
-                                .frame(width: 160, height: 160)
-
-                            RingView(progress: habitsProgress(habitIndex),
-                                     color: .accentHabits, lineWidth: 12)
-                                .frame(width: 126, height: 126)
-
-                            RingView(progress: allTasksProgress,
-                                     color: .accentAllTasks, lineWidth: 10)
-                                .frame(width: 94, height: 94)
-                        }
-
-                        HStack(spacing: 12) {
-                            ringStat(value: "\(todayCompletedCount)/\(todayTasks.count)",
-                                     label: "today", color: .accentTasks)
-                            ringStat(value: "\(habitsDoneToday(habitIndex))/\(activeHabits.count)",
-                                     label: "habits", color: .accentHabits)
-                            ringStat(value: "\(allTasks.filter(\.isCompleted).count)/\(allTasks.count)",
-                                     label: "all time", color: .accentAllTasks)
-                        }
-                    }
-                    .padding()
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    // MARK: Overview — the day as a compartment tray. Cells
+                    // fill as things complete; finishing every task and
+                    // habit seals the lid.
+                    DayTrayView(tasksCompleted: todayCompletedCount,
+                                tasksTotal: todayTasks.count,
+                                habitsDone: habitsDoneToday(habitIndex),
+                                habitsTotal: activeHabits.count,
+                                allTimeCompleted: allTasks.filter(\.isCompleted).count,
+                                allTimeTotal: allTasks.count)
+                        .padding()
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
 
                     // MARK: Outstanding tasks — a static preview instead of a
                     // scroll view nested inside the page scroll
@@ -298,18 +267,5 @@ struct DashboardView: View {
                 }
             }
         }
-    }
-
-    @ViewBuilder
-    private func ringStat(value: String, label: String, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.title3.bold())
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }

@@ -98,19 +98,99 @@ extension WidgetSnapshot {
 
 // MARK: - Shared pieces
 
-private struct RingShape: View {
-    var progress: Double
-    var color: Color
-    var lineWidth: CGFloat
+/// Mini version of the app's dashboard day-tray: compartments of cells
+/// with the sealing lid. One slot per domain; the lid closes once every
+/// task and habit for the day is done.
+private struct WidgetDayTray: View {
+    struct Slot {
+        let completed: Int
+        let total: Int
+        let color: Color
+    }
+
+    var slots: [Slot]
+    var isSealed: Bool
+    var cellCap: Int = 6
+
+    private let trayColor = Color(hex: "C79E73")
 
     var body: some View {
-        ZStack {
-            Circle()
-                .stroke(color.opacity(0.2), lineWidth: lineWidth)
-            Circle()
-                .trim(from: 0, to: min(progress, 1))
-                .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                .rotationEffect(.degrees(-90))
+        VStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(trayColor.opacity(isSealed ? 0.85 : 0.35))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .strokeBorder(trayColor.opacity(0.7), lineWidth: 1)
+                )
+                .frame(height: 10)
+                .padding(.horizontal, -3)
+                .rotation3DEffect(
+                    .degrees(isSealed ? 0 : -110),
+                    axis: (x: 1, y: 0, z: 0),
+                    anchor: .bottom,
+                    perspective: 0.4
+                )
+                .zIndex(1)
+
+            HStack(spacing: 0) {
+                ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
+                    cellGrid(slot)
+                        .padding(4)
+                    if index < slots.count - 1 {
+                        Rectangle()
+                            .fill(trayColor.opacity(0.8))
+                            .frame(width: 1.5)
+                    }
+                }
+            }
+            .overlay(
+                UnevenRoundedRectangle(bottomLeadingRadius: 8,
+                                       bottomTrailingRadius: 8,
+                                       style: .continuous)
+                    .strokeBorder(trayColor.opacity(0.8), lineWidth: 1.5)
+            )
+            .overlay {
+                if isSealed {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.white)
+                        .shadow(color: trayColor.opacity(0.6), radius: 2)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func cellGrid(_ slot: Slot) -> some View {
+        if slot.total == 0 {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .strokeBorder(slot.color.opacity(0.3),
+                              style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            let count = min(slot.total, cellCap)
+            let filled = slot.total <= cellCap
+                ? slot.completed
+                : Int((Double(slot.completed) / Double(slot.total) * Double(cellCap)).rounded())
+            let columns = Int(ceil(sqrt(Double(count))))
+            let rows = Int(ceil(Double(count) / Double(columns)))
+
+            Grid(horizontalSpacing: 2, verticalSpacing: 2) {
+                ForEach(0..<rows, id: \.self) { row in
+                    GridRow {
+                        ForEach(0..<columns, id: \.self) { column in
+                            let index = row * columns + column
+                            if index < count {
+                                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                    .fill(index < filled
+                                          ? slot.color : slot.color.opacity(0.15))
+                            } else {
+                                Color.clear
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -161,7 +241,7 @@ struct TodayRingsWidget: Widget {
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Today's Progress")
-        .description("Your task and habit rings for today.")
+        .description("Today's tasks and habits as a compartment tray that seals when you're done.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge,
                             .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
@@ -177,22 +257,36 @@ struct TodayRingsView: View {
     private var habitsTotal: Int { entry.snapshot?.habitsTotal ?? 0 }
     private var shoppingChecked: Int { entry.snapshot?.shoppingChecked ?? 0 }
     private var shoppingTotal: Int { entry.snapshot?.shoppingTotal ?? 0 }
-    /// The shopping ring only appears while the list has items on it
-    private var hasShopping: Bool { shoppingTotal > 0 }
+    /// Shopping appears only while something is still left to buy — a
+    /// fully bought (or empty) list drops out of every layout
+    private var hasShopping: Bool { shoppingTotal > 0 && shoppingChecked < shoppingTotal }
 
     private let shoppingColor = Color(red: 0.30, green: 0.80, blue: 0.78)
 
     private var tasksProgress: Double {
         todayTotal > 0 ? Double(todayCompleted) / Double(todayTotal) : 0
     }
-    private var habitsProgress: Double {
-        habitsTotal > 0 ? Double(habitsDone) / Double(habitsTotal) : 0
-    }
-    private var shoppingProgress: Double {
-        shoppingTotal > 0 ? Double(shoppingChecked) / Double(shoppingTotal) : 0
-    }
     private var boxesInProgress: Int {
         entry.snapshot?.boxes.filter { $0.total > 0 && $0.completed < $0.total }.count ?? 0
+    }
+
+    /// Same rule as the app's dashboard tray: every task and habit done
+    private var isSealed: Bool {
+        (todayTotal + habitsTotal) > 0
+            && todayCompleted >= todayTotal
+            && habitsDone >= habitsTotal
+    }
+
+    private var traySlots: [WidgetDayTray.Slot] {
+        var slots = [
+            WidgetDayTray.Slot(completed: todayCompleted, total: todayTotal, color: .green),
+            WidgetDayTray.Slot(completed: habitsDone, total: habitsTotal, color: .orange)
+        ]
+        if hasShopping {
+            slots.append(WidgetDayTray.Slot(completed: shoppingChecked,
+                                            total: shoppingTotal, color: shoppingColor))
+        }
+        return slots
     }
 
     var body: some View {
@@ -232,8 +326,9 @@ struct TodayRingsView: View {
             .font(.caption2)
 
         case .systemMedium:
-            HStack(spacing: 18) {
-                rings(outer: 92, lineWidth: hasShopping ? 9 : 11)
+            HStack(spacing: 16) {
+                WidgetDayTray(slots: traySlots, isSealed: isSealed)
+                    .frame(width: 124, height: 92)
                 VStack(alignment: .leading, spacing: 7) {
                     statLine(color: .green, label: "Tasks today",
                              value: "\(todayCompleted)/\(todayTotal)")
@@ -252,7 +347,9 @@ struct TodayRingsView: View {
 
         case .systemLarge:
             VStack(spacing: 18) {
-                rings(outer: 150, lineWidth: hasShopping ? 13 : 15)
+                WidgetDayTray(slots: traySlots, isSealed: isSealed, cellCap: 9)
+                    .frame(height: 170)
+                    .padding(.horizontal, 8)
                 HStack(spacing: 12) {
                     largeStat(color: .green, label: "tasks today",
                               value: "\(todayCompleted)/\(todayTotal)")
@@ -269,7 +366,8 @@ struct TodayRingsView: View {
 
         default: // systemSmall
             VStack(spacing: 8) {
-                rings(outer: 74, lineWidth: hasShopping ? 7 : 9)
+                WidgetDayTray(slots: traySlots, isSealed: isSealed)
+                    .frame(height: 82)
                 HStack(spacing: 8) {
                     Text("\(todayCompleted)/\(todayTotal)")
                         .foregroundStyle(.green)
@@ -285,23 +383,6 @@ struct TodayRingsView: View {
         }
     }
 
-    /// Tasks outside, habits inside — and a third teal shopping ring in
-    /// the middle while the list has items. Ring gaps scale off the line
-    /// width so two- and three-ring layouts both breathe.
-    private func rings(outer: CGFloat, lineWidth: CGFloat) -> some View {
-        let step = (lineWidth + 3) * 2
-        return ZStack {
-            RingShape(progress: tasksProgress, color: .green, lineWidth: lineWidth)
-                .frame(width: outer, height: outer)
-            RingShape(progress: habitsProgress, color: .orange, lineWidth: lineWidth)
-                .frame(width: outer - step, height: outer - step)
-            if hasShopping {
-                RingShape(progress: shoppingProgress, color: shoppingColor,
-                          lineWidth: lineWidth)
-                    .frame(width: outer - step * 2, height: outer - step * 2)
-            }
-        }
-    }
 
     private func statLine(color: Color, label: String, value: String) -> some View {
         HStack(spacing: 7) {
