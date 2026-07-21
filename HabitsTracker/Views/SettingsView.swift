@@ -47,8 +47,13 @@ struct BackupDocument: FileDocument {
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage("appAppearance") private var appearance: AppAppearance = .dark
-    @AppStorage("userName") private var userName = ""
+    @Query private var profiles: [UserProfile]
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+
+    private var profileDisplayName: String {
+        let name = profiles.first?.name.trimmingCharacters(in: .whitespaces) ?? ""
+        return name.isEmpty ? "Your Profile" : name
+    }
 
     // Back up & restore state
     @State private var exportDocument: BackupDocument?
@@ -62,10 +67,23 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Your name", text: $userName)
-                        .textContentType(.givenName)
-                } footer: {
-                    Text("Used for the greeting on your Today page.")
+                    NavigationLink {
+                        ProfileView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            AvatarView(profile: profiles.first, size: 44)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(profileDisplayName)
+                                    .font(.headline)
+                                Text(profiles.first == nil
+                                     ? "Set up your profile"
+                                     : "Name & photo")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
                 }
 
                 Section("Appearance") {

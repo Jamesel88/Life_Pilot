@@ -59,7 +59,7 @@ struct HabitsTrackerApp: App {
     static let sharedModelContainer: ModelContainer = {
         let schema = Schema([Habit.self, TaskGroup.self, TaskItem.self,
                              TaskBox.self, BoxSubtask.self, SubtaskPhoto.self,
-                             ShoppingItem.self])
+                             ShoppingItem.self, UserProfile.self])
         let configuration = cloudKitSyncEnabled
             ? ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)
             : ModelConfiguration(schema: schema)

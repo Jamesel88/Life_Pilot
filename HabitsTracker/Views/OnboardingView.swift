@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 /// First-launch walkthrough: welcome, then one page each for creating a
 /// task, a group, and a habit — every step optional — ending on the
@@ -11,6 +12,9 @@ struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var page = 0
 
+    @State private var profileName = ""
+    @State private var profilePhotoData: Data?
+    @State private var photoPickerItem: PhotosPickerItem?
     @State private var taskTitle = ""
     @State private var groupName = ""
     @State private var selectedColorHex = "34C759"
@@ -36,10 +40,11 @@ struct OnboardingView: View {
 
                 TabView(selection: $page) {
                     welcomePage.tag(0)
-                    taskPage.tag(1)
-                    groupPage.tag(2)
-                    habitPage.tag(3)
-                    boxesPage.tag(4)
+                    profilePage.tag(1)
+                    taskPage.tag(2)
+                    groupPage.tag(3)
+                    habitPage.tag(4)
+                    boxesPage.tag(5)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
                 .indexViewStyle(.page(backgroundDisplayMode: .always))
@@ -63,6 +68,64 @@ struct OnboardingView: View {
                 .multilineTextAlignment(.center)
         } footer: {
             primaryButton("Get started") { advance() }
+        }
+    }
+
+    private var profilePage: some View {
+        pageLayout {
+            ZStack(alignment: .bottomTrailing) {
+                Group {
+                    if let data = profilePhotoData, let image = UIImage(data: data) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Color.accentBoxes.opacity(0.18)
+                            .overlay(
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 36))
+                                    .foregroundStyle(Color.accentBoxes)
+                            )
+                    }
+                }
+                .frame(width: 84, height: 84)
+                .clipShape(Circle())
+
+                PhotosPicker(selection: $photoPickerItem, matching: .images) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.accentBoxes)
+                        .background(Circle().fill(Color(.systemBackground)))
+                }
+                .accessibilityLabel("Add profile photo")
+            }
+            Text("Make it yours")
+                .font(.system(.title2, design: .rounded).weight(.bold))
+            Text("A name for your greeting, a photo if you like. No account, no sign-in — everything stays on your device and your own iCloud.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            TextField("Your name", text: $profileName)
+                .textContentType(.name)
+                .textFieldStyle(.roundedBorder)
+                .padding(.horizontal, 8)
+        } footer: {
+            primaryButton(profileName.trimmingCharacters(in: .whitespaces).isEmpty
+                          && profilePhotoData == nil ? "Continue" : "Create profile") {
+                createProfileIfProvided()
+                advance()
+            }
+            skipButton()
+        }
+        .onChange(of: photoPickerItem) { _, item in
+            guard let item else { return }
+            photoPickerItem = nil
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data) else { return }
+                profilePhotoData = image.preparingThumbnail(
+                    of: CGSize(width: 512, height: 512))?.pngData() ?? data
+            }
         }
     }
 
@@ -212,6 +275,12 @@ struct OnboardingView: View {
     }
 
     // MARK: - Creation
+
+    private func createProfileIfProvided() {
+        let name = profileName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty || profilePhotoData != nil else { return }
+        modelContext.insert(UserProfile(name: name, photoData: profilePhotoData))
+    }
 
     private func createTaskIfNamed() {
         let title = taskTitle.trimmingCharacters(in: .whitespaces)

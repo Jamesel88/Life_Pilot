@@ -13,6 +13,12 @@ struct BackupFile: Codable {
     var tasks: [TaskBackup] = []
     var boxes: [BoxBackup] = []
     var shopping: [ShoppingItemBackup]?   // optional so older files decode
+    var profile: ProfileBackup?
+}
+
+struct ProfileBackup: Codable {
+    var name: String
+    var photo: Data?
 }
 
 struct ShoppingItemBackup: Codable {
@@ -155,6 +161,11 @@ enum BackupService {
                           })
         }
 
+        if let userProfile = try context.fetch(FetchDescriptor<UserProfile>()).first {
+            backup.profile = ProfileBackup(name: userProfile.name,
+                                           photo: userProfile.photoData)
+        }
+
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         return try encoder.encode(backup)
@@ -181,6 +192,12 @@ enum BackupService {
         try context.delete(model: TaskGroup.self)
         try context.delete(model: Habit.self)
         try context.delete(model: ShoppingItem.self)
+        try context.delete(model: UserProfile.self)
+
+        if let profileEntry = backup.profile {
+            context.insert(UserProfile(name: profileEntry.name,
+                                       photoData: profileEntry.photo))
+        }
 
         // Groups first — tasks and boxes point at them
         var groupsByID: [UUID: TaskGroup] = [:]

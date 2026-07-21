@@ -10,6 +10,7 @@ struct DashboardView: View {
     @Query private var groups: [TaskGroup]
     @Query private var habits: [Habit]
     @Query private var shoppingItems: [ShoppingItem]
+    @Query private var profiles: [UserProfile]
     @Binding var tabSelection: AppTab
     @AppStorage("userName") private var userName = ""
 
@@ -61,8 +62,13 @@ struct DashboardView: View {
     private var greeting: String {
         let hour = calendar.component(.hour, from: .now)
         let base = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
-        let name = userName.trimmingCharacters(in: .whitespaces)
-        return name.isEmpty ? base : "\(base), \(name)"
+        // Profile name wins; the old Settings name field is the fallback
+        let profileName = profiles.first?.name.trimmingCharacters(in: .whitespaces) ?? ""
+        let name = profileName.isEmpty
+            ? userName.trimmingCharacters(in: .whitespaces) : profileName
+        // First name only — greetings aren't formal
+        let firstName = name.split(separator: " ").first.map(String.init) ?? name
+        return firstName.isEmpty ? base : "\(base), \(firstName)"
     }
 
     // MARK: - Body
@@ -106,7 +112,7 @@ struct DashboardView: View {
                 .font(.caption2.weight(.semibold))
                 .kerning(1.5)
                 .foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center) {
                 Text(greeting)
                     .font(.system(.title2, design: .rounded).weight(.bold))
                 Spacer()
@@ -118,6 +124,12 @@ struct DashboardView: View {
                         .foregroundStyle(Color.accentBoxes)
                 }
                 .accessibilityLabel("Insights")
+                NavigationLink {
+                    ProfileView()
+                } label: {
+                    AvatarView(profile: profiles.first, size: 34)
+                }
+                .accessibilityLabel("Your profile")
             }
         }
         .padding(.horizontal, 4)
