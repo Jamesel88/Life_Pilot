@@ -90,8 +90,20 @@ Revisit after TestFlight is underway.
 
 ## Later / v1.x
 
-- Widgets for iPad sizes; watch app
+- Widgets for iPad sizes
+- Apple Watch complications — WidgetKit runs on watchOS too, so the
+  existing ring/tray widget code and App Group snapshot bridge are
+  largely reusable. Needs a Watch App target created in Xcode's UI
+  first (File → New → Target → Watch App) — same constraint as the
+  original iPhone widget target, can't be hand-added to the project
+  file safely. Once that target exists, build the complications against
+  the existing snapshot format.
 - EventKit overlay on the calendar view; NSCalendarsFullAccessUsageDescription
 - Per-weekday habits and quantity goals ("8 glasses")
 - Shared lists via CloudKit sharing
 - Unit-test target for date/window logic (dueBucket, anchorDate, streaks)
+- More Siri/Shortcuts via App Intents — `HabitIntents.swift` already
+  exposes "Log [habit]" to Siri and Shortcuts; extend the same pattern
+  to quick-add a task (reuse the quick-add date parser), mark a task
+  done by name, and add a shopping list item. No new capability needed.
+  Start with one or two, not all at once.

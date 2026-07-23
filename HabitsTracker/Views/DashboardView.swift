@@ -13,6 +13,7 @@ struct DashboardView: View {
     @Query private var profiles: [UserProfile]
     @Binding var tabSelection: AppTab
     @AppStorage("userName") private var userName = ""
+    @State private var showingInsightsFromTray = false
 
     private var calendar: Calendar { .current }
 
@@ -101,6 +102,9 @@ struct DashboardView: View {
             .monogramWatermark(base: Color(.systemBackground))
             .compartmentsTabBar()
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $showingInsightsFromTray) {
+                InsightsView()
+            }
         }
     }
 
@@ -143,7 +147,10 @@ struct DashboardView: View {
                     habitsDone: habitsDoneToday(index),
                     habitsTotal: activeHabits.count,
                     allTimeCompleted: allTasks.filter(\.isCompleted).count,
-                    allTimeTotal: allTasks.count)
+                    allTimeTotal: allTasks.count,
+                    onTapTasks: { tabSelection = .tasks },
+                    onTapHabits: { tabSelection = .habits },
+                    onTapAllTime: { showingInsightsFromTray = true })
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)

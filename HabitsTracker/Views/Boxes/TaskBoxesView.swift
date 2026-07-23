@@ -7,6 +7,7 @@ struct TaskBoxesView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TaskBox.createdAt) private var boxes: [TaskBox]
     @State private var showingAddBox = false
+    @State private var boxPendingDeletion: TaskBox?
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
 
@@ -21,6 +22,13 @@ struct TaskBoxesView: View {
                             BoxTileView(box: box)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                boxPendingDeletion = box
+                            } label: {
+                                Label("Delete Box", systemImage: "trash")
+                            }
+                        }
                     }
                 }
                 .padding()
@@ -45,6 +53,21 @@ struct TaskBoxesView: View {
                     ContentUnavailableView("No compartment boxes yet",
                         systemImage: "square.split.2x2",
                         description: Text("Tap + to create one for a bigger task — every subtask becomes a compartment"))
+                }
+            }
+            .alert("Delete this box?",
+                   isPresented: Binding(get: { boxPendingDeletion != nil },
+                                        set: { if !$0 { boxPendingDeletion = nil } })) {
+                Button("Cancel", role: .cancel) { boxPendingDeletion = nil }
+                Button("Delete", role: .destructive) {
+                    if let box = boxPendingDeletion {
+                        modelContext.delete(box)
+                    }
+                    boxPendingDeletion = nil
+                }
+            } message: {
+                if let box = boxPendingDeletion {
+                    Text("Subtasks inside \"\(box.name)\" will be deleted too. Linked tasks stay on the Tasks tab. This can't be undone.")
                 }
             }
         }

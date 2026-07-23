@@ -29,8 +29,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "609589F62FFA637800E2695E"
-               BuildableName = "Life-Pilot.app"
-               BlueprintName = "Life-Pilot"
+               BuildableName = "Compartments.app"
+               BlueprintName = "Compartments"
                ReferencedContainer = "container:HabitsTracker.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>

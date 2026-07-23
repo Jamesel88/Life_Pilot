@@ -40,7 +40,7 @@
 		6076B43E3006D468002A0C8E /* CompartmentsWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CompartmentsWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6076B4403006D468002A0C8E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		6076B4423006D468002A0C8E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		609589F72FFA637800E2695E /* Life-Pilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Life-Pilot.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		609589F72FFA637800E2695E /* Compartments.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Compartments.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -111,7 +111,7 @@
 		609589F82FFA637800E2695E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				609589F72FFA637800E2695E /* Life-Pilot.app */,
+				609589F72FFA637800E2695E /* Compartments.app */,
 				6076B43E3006D468002A0C8E /* CompartmentsWidgetsExtension.appex */,
 			);
 			name = Products;
@@ -142,9 +142,9 @@
 			productReference = 6076B43E3006D468002A0C8E /* CompartmentsWidgetsExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		609589F62FFA637800E2695E /* Life-Pilot */ = {
+		609589F62FFA637800E2695E /* Compartments */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 60958A042FFA637900E2695E /* Build configuration list for PBXNativeTarget "Life-Pilot" */;
+			buildConfigurationList = 60958A042FFA637900E2695E /* Build configuration list for PBXNativeTarget "Compartments" */;
 			buildPhases = (
 				609589F32FFA637800E2695E /* Sources */,
 				609589F42FFA637800E2695E /* Frameworks */,
@@ -159,11 +159,11 @@
 			fileSystemSynchronizedGroups = (
 				609589F92FFA637800E2695E /* HabitsTracker */,
 			);
-			name = "Life-Pilot";
+			name = Compartments;
 			packageProductDependencies = (
 			);
 			productName = HabitsTracker;
-			productReference = 609589F72FFA637800E2695E /* Life-Pilot.app */;
+			productReference = 609589F72FFA637800E2695E /* Compartments.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -198,7 +198,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				609589F62FFA637800E2695E /* Life-Pilot */,
+				609589F62FFA637800E2695E /* Compartments */,
 				6076B43D3006D468002A0C8E /* CompartmentsWidgetsExtension */,
 			);
 		};
@@ -449,8 +449,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Compartments;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -469,13 +469,14 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -492,8 +493,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Compartments;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -512,13 +513,14 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -543,7 +545,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		60958A042FFA637900E2695E /* Build configuration list for PBXNativeTarget "Life-Pilot" */ = {
+		60958A042FFA637900E2695E /* Build configuration list for PBXNativeTarget "Compartments" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				60958A052FFA637900E2695E /* Debug */,
