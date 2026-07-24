@@ -69,6 +69,14 @@ struct SubtaskEditorView: View {
                         Label("Add photos", systemImage: "photo.badge.plus")
                     }
                 }
+
+                // Only an already-saved subtask can be linked to — like
+                // tasks, there's nothing to attach a link to until it exists
+                if let subtask {
+                    Section("Linked Tasks") {
+                        LinkedTasksForSubtaskView(subtask: subtask)
+                    }
+                }
             }
             .navigationTitle(subtask == nil ? "New Subtask" : "Edit Subtask")
             .navigationBarTitleDisplayMode(.inline)

@@ -72,13 +72,9 @@ struct EditTaskView: View {
                     }
                 }
 
-                Section("Priority") {
-                    Picker("Priority", selection: $task.priority) {
-                        ForEach(Priority.allCases, id: \.self) { p in
-                            Text(p.label).tag(p)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                Section {
+                    Toggle("Mark as urgent", isOn: $task.isUrgent)
+                        .tint(.red)
                 }
 
                 Section("Linked Tasks") {

@@ -21,7 +21,8 @@ struct TaskBoxDetailView: View {
 
     private var availableTasks: [TaskItem] {
         allTasks.filter { candidate in
-            !box.allLinkedTasks.contains(where: { $0 === candidate })
+            !candidate.isCompleted
+                && !box.allLinkedTasks.contains(where: { $0 === candidate })
         }
     }
 
@@ -95,7 +96,7 @@ struct TaskBoxDetailView: View {
                             .foregroundStyle(.secondary)
                         TaskRowView(task: task)
                         Button {
-                            unlink(task)
+                            box.unlink(task)
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
@@ -127,8 +128,7 @@ struct TaskBoxDetailView: View {
             NavigationStack {
                 List(availableTasks) { candidate in
                     Button {
-                        if box.linkedTasks == nil { box.linkedTasks = [] }
-                        box.linkedTasks?.append(candidate)
+                        box.link(candidate)
                         showingLinkPicker = false
                     } label: {
                         TaskRowView(task: candidate)
@@ -160,10 +160,6 @@ struct TaskBoxDetailView: View {
         .sheet(item: $subtaskToEdit) { subtask in
             SubtaskEditorView(box: box, subtask: subtask)
         }
-    }
-
-    private func unlink(_ task: TaskItem) {
-        box.linkedTasks?.removeAll { $0 === task }
     }
 }
 

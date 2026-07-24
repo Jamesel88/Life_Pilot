@@ -131,7 +131,8 @@ struct OnboardingView: View {
 
     private var taskPage: some View {
         pageLayout {
-            pageIcon("checklist", color: .accentTasks)
+            LoopingCheckDemo()
+                .frame(height: 64)
             Text("Add your first task")
                 .font(.system(.title2, design: .rounded).weight(.bold))
             Text("Tasks live on the Tasks tab and today's show up on your dashboard. Try adding one — or type things like \"Dentist tomorrow 3pm\" in quick add later.")
@@ -153,7 +154,8 @@ struct OnboardingView: View {
 
     private var groupPage: some View {
         pageLayout {
-            pageIcon("circle.grid.2x2", color: .accentAllTasks)
+            LoopingGroupDemo()
+                .frame(height: 74)
             Text("Colour-code with groups")
                 .font(.system(.title2, design: .rounded).weight(.bold))
             Text("Groups sort tasks by person or area of life — Work, Home, the kids — each with its own colour everywhere in the app.")
@@ -190,7 +192,8 @@ struct OnboardingView: View {
 
     private var habitPage: some View {
         pageLayout {
-            pageIcon("repeat", color: .accentHabits)
+            LoopingStreakDemo()
+                .frame(height: 64)
             Text("Build a habit")
                 .font(.system(.title2, design: .rounded).weight(.bold))
             Text("Habits tick over daily, weekly, or monthly — keep a streak going and watch the flame grow on your dashboard.")
@@ -219,7 +222,7 @@ struct OnboardingView: View {
 
     private var boxesPage: some View {
         pageLayout {
-            CompartmentBoxView(color: .accentBoxes, completed: 4, total: 6)
+            LoopingBoxDemo()
                 .frame(width: 110, height: 110)
             Text("Box up the big stuff")
                 .font(.system(.title2, design: .rounded).weight(.bold))
@@ -244,13 +247,6 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, 32)
         .padding(.bottom, 44)
-    }
-
-    private func pageIcon(_ symbol: String, color: Color) -> some View {
-        Image(systemName: symbol)
-            .font(.system(size: 44))
-            .foregroundStyle(color)
-            .frame(height: 64)
     }
 
     private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
@@ -306,4 +302,136 @@ struct OnboardingView: View {
 
 #Preview {
     OnboardingView {}
+}
+
+// MARK: - Live looping demos
+//
+// Real production views (CompletionToggleButton, RingView,
+// CompartmentBoxView), just driven by a repeating loop instead of user
+// input — a "gif-style" preview of each feature that needs no external
+// image assets and is always pixel-faithful to the real UI. Each cancels
+// its loop task on disappear so paging away during onboarding doesn't
+// leave background timers running.
+
+private struct LoopingCheckDemo: View {
+    @State private var isChecked = false
+    @State private var loopTask: Task<Void, Never>?
+
+    var body: some View {
+        CompletionToggleButton(isCompleted: isChecked, itemTitle: "Book the car in") {}
+            .scaleEffect(2.2)
+            .allowsHitTesting(false)
+            .onAppear(perform: startLoop)
+            .onDisappear { loopTask?.cancel() }
+    }
+
+    private func startLoop() {
+        loopTask?.cancel()
+        loopTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1.0))
+                guard !Task.isCancelled else { return }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) { isChecked = true }
+                try? await Task.sleep(for: .seconds(1.4))
+                guard !Task.isCancelled else { return }
+                withAnimation { isChecked = false }
+            }
+        }
+    }
+}
+
+private struct LoopingGroupDemo: View {
+    @State private var colorIndex = 0
+    @State private var loopTask: Task<Void, Never>?
+    private let colors: [Color] = [.accentTasks, .accentHabits, .accentAllTasks]
+
+    var body: some View {
+        ZStack {
+            RingView(progress: 0.7, color: colors[colorIndex], lineWidth: 10)
+                .frame(width: 70, height: 70)
+            Circle()
+                .fill(colors[colorIndex])
+                .frame(width: 14, height: 14)
+        }
+        .onAppear(perform: startLoop)
+        .onDisappear { loopTask?.cancel() }
+    }
+
+    private func startLoop() {
+        loopTask?.cancel()
+        loopTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1.1))
+                guard !Task.isCancelled else { return }
+                withAnimation { colorIndex = (colorIndex + 1) % colors.count }
+            }
+        }
+    }
+}
+
+private struct LoopingStreakDemo: View {
+    @State private var streak = 0
+    @State private var loopTask: Task<Void, Never>?
+    private let maxStreak = 12
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 34))
+                .foregroundStyle(Color.accentHabits)
+            Text("\(streak) day streak")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.accentHabits)
+                .contentTransition(.numericText())
+                .monospacedDigit()
+        }
+        .onAppear(perform: startLoop)
+        .onDisappear { loopTask?.cancel() }
+    }
+
+    private func startLoop() {
+        loopTask?.cancel()
+        loopTask = Task {
+            while !Task.isCancelled {
+                for value in 0...maxStreak {
+                    guard !Task.isCancelled else { return }
+                    try? await Task.sleep(for: .seconds(0.18))
+                    withAnimation { streak = value }
+                }
+                try? await Task.sleep(for: .seconds(1.2))
+                guard !Task.isCancelled else { return }
+                withAnimation { streak = 0 }
+                try? await Task.sleep(for: .seconds(0.3))
+            }
+        }
+    }
+}
+
+private struct LoopingBoxDemo: View {
+    @State private var completed = 0
+    @State private var loopTask: Task<Void, Never>?
+    private let total = 6
+
+    var body: some View {
+        CompartmentBoxView(color: .accentBoxes, completed: completed, total: total)
+            .onAppear(perform: startLoop)
+            .onDisappear { loopTask?.cancel() }
+    }
+
+    private func startLoop() {
+        loopTask?.cancel()
+        loopTask = Task {
+            while !Task.isCancelled {
+                for step in 0...total {
+                    guard !Task.isCancelled else { return }
+                    try? await Task.sleep(for: .seconds(0.45))
+                    withAnimation { completed = step }
+                }
+                try? await Task.sleep(for: .seconds(1.1))
+                guard !Task.isCancelled else { return }
+                withAnimation { completed = 0 }
+                try? await Task.sleep(for: .seconds(0.3))
+            }
+        }
+    }
 }

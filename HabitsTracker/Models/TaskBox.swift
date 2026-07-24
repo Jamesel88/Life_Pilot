@@ -15,6 +15,10 @@ class TaskBox {
     /// Existing tasks pulled into this box via the "Link a task" button
     @Relationship(inverse: \TaskItem.containingBoxes)
     var linkedTasks: [TaskItem]?
+    /// Subtasks (belonging to OTHER boxes) linked to this box as a whole —
+    /// distinct from `subtasks`, which are this box's own children.
+    @Relationship(inverse: \BoxSubtask.linkedBoxes)
+    var linkedSubtasks: [BoxSubtask]?
 
     init(name: String, colorHex: String, group: TaskGroup? = nil) {
         self.name = name
@@ -30,6 +34,7 @@ extension TaskBox {
 
     var allSubtasks: [BoxSubtask] { subtasks ?? [] }
     var allLinkedTasks: [TaskItem] { linkedTasks ?? [] }
+    var allLinkedSubtasks: [BoxSubtask] { linkedSubtasks ?? [] }
 
     var totalCount: Int { allSubtasks.count + allLinkedTasks.count }
 
@@ -49,6 +54,34 @@ extension TaskBox {
 
     /// The lid stays open while any item in the box is still outstanding.
     var isOpen: Bool { completedCount < totalCount }
+
+    /// Sealed: everything in the box is done. Sealed boxes are excluded
+    /// from "link into a box" pickers — nothing new belongs in a closed box.
+    var isSealed: Bool { !isEmpty && !isOpen }
+
+    /// Links an existing task into this box — same convention as
+    /// TaskItem.link(to:); SwiftData maintains the containingBoxes
+    /// inverse automatically once one side is set.
+    func link(_ task: TaskItem) {
+        guard !allLinkedTasks.contains(where: { $0 === task }) else { return }
+        if linkedTasks == nil { linkedTasks = [] }
+        linkedTasks?.append(task)
+    }
+
+    func unlink(_ task: TaskItem) {
+        linkedTasks?.removeAll { $0 === task }
+    }
+
+    /// Links a subtask belonging to another box into this box as a whole.
+    func link(_ subtask: BoxSubtask) {
+        guard !allLinkedSubtasks.contains(where: { $0 === subtask }) else { return }
+        if linkedSubtasks == nil { linkedSubtasks = [] }
+        linkedSubtasks?.append(subtask)
+    }
+
+    func unlink(_ subtask: BoxSubtask) {
+        linkedSubtasks?.removeAll { $0 === subtask }
+    }
 }
 
 /// A lightweight checklist item that lives inside one TaskBox only —
@@ -64,6 +97,19 @@ class BoxSubtask {
     var box: TaskBox?
     @Relationship(deleteRule: .cascade, inverse: \SubtaskPhoto.subtask)
     var photos: [SubtaskPhoto]?
+    /// Tasks linked to this specific subtask, rather than to the box as
+    /// a whole — same convention as TaskBox.linkedTasks.
+    @Relationship(inverse: \TaskItem.linkedSubtasks)
+    var linkedTasks: [TaskItem]?
+    /// Boxes (other than this subtask's own parent) this subtask is
+    /// linked to as a whole — inverse of TaskBox.linkedSubtasks.
+    var linkedBoxes: [TaskBox]?
+    /// Other subtasks this one is linked to. Symmetric by convention,
+    /// stored one-sided (like TaskItem.linkedTasks/linkedBy) — read
+    /// through `allLinkedSubtasks`, never these two directly.
+    @Relationship(inverse: \BoxSubtask.linkedBySubtasks)
+    var linkedSubtasks: [BoxSubtask]?
+    var linkedBySubtasks: [BoxSubtask]?
 
     init(title: String, dueDate: Date? = nil) {
         self.title = title
@@ -75,6 +121,52 @@ extension BoxSubtask {
     var isOverdue: Bool {
         guard let dueDate, !isCompleted else { return false }
         return dueDate < Calendar.current.startOfDay(for: .now)
+    }
+
+    var allLinkedTasks: [TaskItem] { linkedTasks ?? [] }
+    var allLinkedBoxes: [TaskBox] { linkedBoxes ?? [] }
+
+    /// Both directions of the peer-subtask link, merged and deduplicated
+    /// — same convention as TaskItem.allLinkedTasks.
+    var allLinkedSubtasks: [BoxSubtask] {
+        var seen = Set<PersistentIdentifier>()
+        return ((linkedSubtasks ?? []) + (linkedBySubtasks ?? [])).filter {
+            seen.insert($0.persistentModelID).inserted
+        }
+    }
+
+    func link(_ task: TaskItem) {
+        guard !allLinkedTasks.contains(where: { $0 === task }) else { return }
+        if linkedTasks == nil { linkedTasks = [] }
+        linkedTasks?.append(task)
+    }
+
+    func unlink(_ task: TaskItem) {
+        linkedTasks?.removeAll { $0 === task }
+    }
+
+    /// Links a whole other box to this subtask.
+    func link(_ box: TaskBox) {
+        guard !allLinkedBoxes.contains(where: { $0 === box }) else { return }
+        if linkedBoxes == nil { linkedBoxes = [] }
+        linkedBoxes?.append(box)
+    }
+
+    func unlink(_ box: TaskBox) {
+        linkedBoxes?.removeAll { $0 === box }
+    }
+
+    /// Links to another subtask; the edge may live on either side, so
+    /// unlink clears both.
+    func link(_ other: BoxSubtask) {
+        guard !allLinkedSubtasks.contains(where: { $0 === other }) else { return }
+        if linkedSubtasks == nil { linkedSubtasks = [] }
+        linkedSubtasks?.append(other)
+    }
+
+    func unlink(_ other: BoxSubtask) {
+        linkedSubtasks?.removeAll { $0 === other }
+        linkedBySubtasks?.removeAll { $0 === other }
     }
 }
 

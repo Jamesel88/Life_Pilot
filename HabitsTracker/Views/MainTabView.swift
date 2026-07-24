@@ -4,7 +4,7 @@ import UIKit
 /// Tab identity in one place — views navigate with `.habits`, not a magic
 /// number that silently breaks when tabs are added or reordered.
 enum AppTab: Hashable {
-    case dashboard, tasks, boxes, habits, settings
+    case dashboard, tasks, boxes, habits, links
 }
 
 /// Shared tab selection, so the custom bar can live *inside* each tab's
@@ -39,9 +39,9 @@ struct MainTabView: View {
             HabitsView()
                 .toolbar(.hidden, for: .tabBar)
                 .tag(AppTab.habits)
-            SettingsView()
+            LinksGraphView()
                 .toolbar(.hidden, for: .tabBar)
-                .tag(AppTab.settings)
+                .tag(AppTab.links)
         }
         .environment(router)
     }
@@ -80,7 +80,7 @@ private struct CompartmentsTabBar: View {
             tabButton(.tasks, symbol: "checklist", label: "Tasks")
             monogramButton
             tabButton(.habits, symbol: "repeat", label: "Habits")
-            tabButton(.settings, symbol: "gearshape", label: "Settings")
+            tabButton(.links, symbol: "link", label: "Links")
         }
         .padding(.horizontal, 6)
         .padding(.top, 7)

@@ -106,6 +106,9 @@ class TaskItem {
     var linkedBy: [TaskItem]?
     /// Inverse of TaskBox.linkedTasks — the boxes this task is linked into
     var containingBoxes: [TaskBox]?
+    /// Inverse of BoxSubtask.linkedTasks — specific subtasks (rather than
+    /// a whole box) this task is linked into
+    var linkedSubtasks: [BoxSubtask]?
     var repeatRule: TaskRepeat = TaskRepeat.never
 
     init(title: String, dueDate: Date, hasTime: Bool = false,

@@ -1,13 +1,14 @@
 import SwiftUI
 import SwiftData
 
-/// Lets a task be linked to other existing tasks, to a whole compartment
-/// box, or to one specific subtask inside a box. Linking and unlinking
-/// always update both sides so opening either end shows the connection.
-/// Completed tasks, sealed boxes, and completed subtasks never appear as
-/// candidates — nothing new belongs on finished work.
-struct LinkedTasksEditorView: View {
-    @Bindable var task: TaskItem
+/// Lets one subtask link to existing tasks, to a whole compartment box,
+/// or to another subtask — the same three categories and the same
+/// whole-box-vs-subtask popup as a task's own linker. Completed tasks,
+/// sealed boxes, and completed subtasks never appear as candidates; a
+/// subtask's own parent box is excluded too (that's containment, not a
+/// link).
+struct LinkedTasksForSubtaskView: View {
+    @Bindable var subtask: BoxSubtask
     @Query private var allTasks: [TaskItem]
     @Query private var allBoxes: [TaskBox]
     @State private var showingPicker = false
@@ -16,40 +17,33 @@ struct LinkedTasksEditorView: View {
 
     private var availableTasks: [TaskItem] {
         allTasks.filter { candidate in
-            candidate !== task
-                && !candidate.isCompleted
-                && !task.allLinkedTasks.contains(where: { $0 === candidate })
+            !candidate.isCompleted
+                && !subtask.allLinkedTasks.contains(where: { $0 === candidate })
         }
     }
 
     private var availableBoxes: [TaskBox] {
         allBoxes.filter { box in
-            !box.isSealed && !box.allLinkedTasks.contains(where: { $0 === task })
+            box !== subtask.box
+                && !box.isSealed
+                && !subtask.allLinkedBoxes.contains(where: { $0 === box })
         }
     }
 
-    private var linkedBoxes: [TaskBox] {
-        task.containingBoxes ?? []
-    }
-
-    private var linkedSubtasks: [BoxSubtask] {
-        task.linkedSubtasks ?? []
-    }
-
     private func openSubtasks(in box: TaskBox) -> [BoxSubtask] {
-        box.allSubtasks.filter { !$0.isCompleted }
+        box.allSubtasks.filter { !$0.isCompleted && $0 !== subtask }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(task.allLinkedTasks) { linked in
+            ForEach(subtask.allLinkedTasks) { linked in
                 HStack {
                     Image(systemName: "link")
                         .foregroundStyle(.secondary)
                     Text(linked.title)
                     Spacer()
                     Button {
-                        task.unlink(from: linked)
+                        subtask.unlink(linked)
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
@@ -58,14 +52,14 @@ struct LinkedTasksEditorView: View {
                 }
             }
 
-            ForEach(linkedBoxes) { box in
+            ForEach(subtask.allLinkedBoxes) { box in
                 HStack {
                     Image(systemName: "shippingbox")
                         .foregroundStyle(.secondary)
                     Text(box.name)
                     Spacer()
                     Button {
-                        box.unlink(task)
+                        subtask.unlink(box)
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
@@ -74,13 +68,13 @@ struct LinkedTasksEditorView: View {
                 }
             }
 
-            ForEach(linkedSubtasks) { subtask in
+            ForEach(subtask.allLinkedSubtasks) { peer in
                 HStack {
                     Image(systemName: "checklist")
                         .foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(subtask.title)
-                        if let box = subtask.box {
+                        Text(peer.title)
+                        if let box = peer.box {
                             Text(box.name)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -88,7 +82,7 @@ struct LinkedTasksEditorView: View {
                     }
                     Spacer()
                     Button {
-                        subtask.unlink(task)
+                        subtask.unlink(peer)
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
@@ -110,7 +104,7 @@ struct LinkedTasksEditorView: View {
                         Section("Tasks") {
                             ForEach(availableTasks) { candidate in
                                 Button {
-                                    task.link(to: candidate)
+                                    subtask.link(candidate)
                                     showingPicker = false
                                 } label: {
                                     Text(candidate.title)
@@ -145,8 +139,7 @@ struct LinkedTasksEditorView: View {
                             systemImage: "link")
                     }
                 }
-                // The whole-box-vs-subtask choice, as a popup right when
-                // a box is tapped
+                // The same whole-box-vs-subtask popup as a task's linker
                 .confirmationDialog(
                     boxPendingChoice.map { "Link to \($0.name)" } ?? "",
                     isPresented: Binding(
@@ -156,7 +149,7 @@ struct LinkedTasksEditorView: View {
                 ) {
                     if let box = boxPendingChoice {
                         Button("Link the whole box") {
-                            box.link(task)
+                            box.link(subtask)
                             boxPendingChoice = nil
                             showingPicker = false
                         }
@@ -175,12 +168,12 @@ struct LinkedTasksEditorView: View {
         }
         .sheet(item: $boxForSubtaskPicking) { box in
             NavigationStack {
-                List(openSubtasks(in: box)) { subtask in
+                List(openSubtasks(in: box)) { peer in
                     Button {
-                        subtask.link(task)
+                        subtask.link(peer)
                         boxForSubtaskPicking = nil
                     } label: {
-                        Text(subtask.title)
+                        Text(peer.title)
                             .foregroundStyle(.primary)
                     }
                 }

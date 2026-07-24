@@ -99,6 +99,19 @@ extension TaskItem {
     }
 }
 
+// MARK: - Priority
+
+extension TaskItem {
+    /// Day-to-day tasks only ever get Normal or Urgent now — the old
+    /// Low/High cases stay on `Priority` so any task saved with one
+    /// before this change still decodes fine, but they're folded into
+    /// "not urgent" everywhere (no stripe, no urgent-section listing).
+    var isUrgent: Bool {
+        get { priority == .urgent }
+        set { priority = newValue ? .urgent : .normal }
+    }
+}
+
 // MARK: - Reminders
 
 extension TaskItem {

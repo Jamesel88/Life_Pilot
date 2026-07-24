@@ -11,7 +11,7 @@ struct AddTaskView: View {
     @State private var hasTime = false
     @State private var dueWindow: DueWindow = .day
     @State private var periodStart: Date = .now
-    @State private var priority: Priority = .normal
+    @State private var isUrgent = false
     @State private var repeatRule: TaskRepeat = .never
     @State private var selectedGroup: TaskGroup?
 
@@ -70,13 +70,9 @@ struct AddTaskView: View {
                     }
                 }
 
-                Section("Priority") {
-                    Picker("Priority", selection: $priority) {
-                        ForEach(Priority.allCases, id: \.self) { p in
-                            Text(p.label).tag(p)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                Section {
+                    Toggle("Mark as urgent", isOn: $isUrgent)
+                        .tint(.red)
                 }
 
                 Section("Group") {
@@ -97,7 +93,7 @@ struct AddTaskView: View {
                             dueDate: dueWindow.anchorDate(from: periodStart) ?? dueDate,
                             hasTime: dueWindow == .day && hasTime,
                             dueWindow: dueWindow,
-                            priority: priority,
+                            priority: isUrgent ? .urgent : .normal,
                             group: selectedGroup, repeatRule: repeatRule)
                         task.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
                         modelContext.insert(task)

@@ -7,12 +7,11 @@ struct TaskRowView: View {
 
     var body: some View {
         HStack {
-            // Priority at a glance: a quiet edge stripe instead of louder
-            // per-row treatments. Normal priority (and completed rows)
-            // stay unmarked.
-            if let stripe = priorityStripeColor {
+            // A quiet red edge stripe for urgent tasks only — everything
+            // else (and completed rows) stays unmarked.
+            if task.isUrgent && !task.isCompleted {
                 Capsule()
-                    .fill(stripe)
+                    .fill(Color.red)
                     .frame(width: 3)
                     .frame(maxHeight: .infinity)
             }
@@ -66,23 +65,13 @@ struct TaskRowView: View {
                     .frame(width: 12, height: 12)
             }
 
-            if task.priority == .urgent && !task.isCompleted {
+            if task.isUrgent && !task.isCompleted {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             }
         }
         .sensoryFeedback(.success, trigger: task.isCompleted) { _, isNowComplete in
             isNowComplete
-        }
-    }
-
-    private var priorityStripeColor: Color? {
-        guard !task.isCompleted else { return nil }
-        switch task.priority {
-        case .urgent: return .red
-        case .high: return .orange
-        case .normal: return nil
-        case .low: return .gray
         }
     }
 

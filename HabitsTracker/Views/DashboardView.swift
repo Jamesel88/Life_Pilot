@@ -32,8 +32,8 @@ struct DashboardView: View {
         todayTasks
             .filter { !$0.isCompleted }
             .sorted { a, b in
-                let aUrgent = a.priority == .urgent
-                let bUrgent = b.priority == .urgent
+                let aUrgent = a.isUrgent
+                let bUrgent = b.isUrgent
                 if aUrgent != bUrgent { return aUrgent }
                 return a.dueDate < b.dueDate
             }
@@ -85,6 +85,8 @@ struct DashboardView: View {
 
                     heroCard(habitIndex)
 
+                    urgentBanner
+
                     streakStrip(habitIndex)
 
                     shoppingChip
@@ -133,7 +135,7 @@ struct DashboardView: View {
                 } label: {
                     AvatarView(profile: profiles.first, size: 34)
                 }
-                .accessibilityLabel("Your profile")
+                .accessibilityLabel("Profile and settings")
             }
         }
         .padding(.horizontal, 4)
@@ -162,6 +164,46 @@ struct DashboardView: View {
                             .strokeBorder(Color.accentBoxes.opacity(0.35), lineWidth: 1)
                     )
             )
+    }
+
+    // MARK: - Urgent banner: one line per urgent task, same tinted-card
+    // language as the streak strip below it, red instead of orange
+
+    @ViewBuilder
+    private var urgentBanner: some View {
+        let urgentTasks = allTasks
+            .filter { $0.isUrgent && !$0.isCompleted }
+            .sorted { $0.dueDate < $1.dueDate }
+
+        if !urgentTasks.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                    Text(urgentTasks.count == 1 ? "1 urgent task" : "\(urgentTasks.count) urgent tasks")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.red)
+                    Spacer()
+                }
+
+                ForEach(urgentTasks) { task in
+                    TaskRowView(task: task)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(LinearGradient(colors: [Color.red.opacity(0.13),
+                                                  Color.red.opacity(0.04)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+                    )
+            )
+        }
     }
 
     // MARK: - Streak strip: habits' own tinted moment, out of the tray
@@ -294,7 +336,7 @@ struct DashboardView: View {
                 }
 
                 ForEach(outstandingToday) { task in
-                    if task.priority == .urgent {
+                    if task.isUrgent {
                         // Quiet urgency: a tinted wash — the row's own red
                         // stripe and triangle carry the signal
                         TaskRowView(task: task)

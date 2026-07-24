@@ -49,7 +49,7 @@ struct TasksView: View {
                 continue
             }
             sections.outstanding.append(task)
-            if task.priority == .urgent {
+            if task.isUrgent {
                 sections.urgent.append(task)
             }
             switch task.dueBucket() {
