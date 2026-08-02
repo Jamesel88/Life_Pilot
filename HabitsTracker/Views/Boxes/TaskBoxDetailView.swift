@@ -8,22 +8,13 @@ import SwiftData
 struct TaskBoxDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var box: TaskBox
-    @Query private var allTasks: [TaskItem]
 
     @State private var showingAddSubtask = false
     @State private var subtaskToEdit: BoxSubtask?
-    @State private var showingLinkPicker = false
     @State private var showingEditBox = false
 
     private var sortedSubtasks: [BoxSubtask] {
         box.allSubtasks.sorted { $0.createdAt < $1.createdAt }
-    }
-
-    private var availableTasks: [TaskItem] {
-        allTasks.filter { candidate in
-            !candidate.isCompleted
-                && !box.allLinkedTasks.contains(where: { $0 === candidate })
-        }
     }
 
     var body: some View {
@@ -87,29 +78,9 @@ struct TaskBoxDetailView: View {
                 }
             }
 
-            // MARK: Linked tasks
-            Section("Linked tasks") {
-                ForEach(box.allLinkedTasks) { task in
-                    HStack {
-                        Image(systemName: "link")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TaskRowView(task: task)
-                        Button {
-                            box.unlink(task)
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                Button {
-                    showingLinkPicker = true
-                } label: {
-                    Label("Link a task", systemImage: "link.badge.plus")
-                }
+            // MARK: Linked
+            Section("Linked") {
+                LinkedTasksForBoxView(box: box)
             }
         }
         .monogramWatermark()
@@ -123,33 +94,6 @@ struct TaskBoxDetailView: View {
                     Image(systemName: "pencil.circle")
                 }
             }
-        }
-        .sheet(isPresented: $showingLinkPicker) {
-            NavigationStack {
-                List(availableTasks) { candidate in
-                    Button {
-                        box.link(candidate)
-                        showingLinkPicker = false
-                    } label: {
-                        TaskRowView(task: candidate)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .navigationTitle("Link a Task")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { showingLinkPicker = false }
-                    }
-                }
-                .overlay {
-                    if availableTasks.isEmpty {
-                        ContentUnavailableView("No other tasks to link",
-                            systemImage: "link")
-                    }
-                }
-            }
-            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingEditBox) {
             EditTaskBoxView(box: box)

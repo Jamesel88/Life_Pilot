@@ -13,6 +13,18 @@ enum AppTab: Hashable {
 @Observable
 final class TabRouter {
     var selection: AppTab = .dashboard
+
+    /// Set by the Links graph when a node is tapped — the destination
+    /// tab's own view observes these and opens the item using its own
+    /// existing detail/edit presentation, so the item is reached inside
+    /// its real home section rather than floating over the Links tab.
+    var pendingTaskToOpen: TaskItem?
+    var pendingBoxToOpen: TaskBox?
+    /// A subtask can't be opened on its own tab (it lives inside a box),
+    /// so this is observed alongside `pendingBoxToOpen` to present the
+    /// subtask's own editor directly instead of leaving the user at the
+    /// box's top-level detail page.
+    var pendingSubtaskToOpen: BoxSubtask?
 }
 
 struct MainTabView: View {
@@ -39,7 +51,7 @@ struct MainTabView: View {
             HabitsView()
                 .toolbar(.hidden, for: .tabBar)
                 .tag(AppTab.habits)
-            LinksGraphView()
+            ChainReactionLinksView()
                 .toolbar(.hidden, for: .tabBar)
                 .tag(AppTab.links)
         }
@@ -103,6 +115,8 @@ private struct CompartmentsTabBar: View {
                     .frame(height: 26)
                 Text(label)
                     .font(.system(size: 10, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .foregroundStyle(isSelected ? Color.primary : Color.secondary)
             .frame(maxWidth: .infinity)
@@ -129,6 +143,8 @@ private struct CompartmentsTabBar: View {
                     .shadow(color: .black.opacity(0.3), radius: 5, y: 2)
                 Text("Compartments")
                     .font(.system(size: 10, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             // The gentle raise: the plate breaks the bar's top line
             .offset(y: -8)

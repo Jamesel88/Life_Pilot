@@ -1,9 +1,21 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct EditTaskView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Bindable var task: TaskItem
+
+    @State private var photosData: [Data]
+    @State private var pickerItems: [PhotosPickerItem] = []
+    @State private var viewerPhoto: PhotoViewerItem?
+
+    init(task: TaskItem) {
+        self.task = task
+        let existing = (task.photos ?? []).sorted { $0.createdAt < $1.createdAt }
+        _photosData = State(initialValue: existing.map(\.data))
+    }
 
     /// The period containing the task's anchor date, re-anchoring on change
     private var periodBinding: Binding<Date> {
@@ -84,6 +96,10 @@ struct EditTaskView: View {
                 Section("Group") {
                     GroupPicker(selection: $task.group)
                 }
+
+                PhotoAttachmentsSection(photosData: $photosData,
+                                        pickerItems: $pickerItems,
+                                        viewerPhoto: $viewerPhoto)
             }
             .navigationTitle("Edit Task")
             .navigationBarTitleDisplayMode(.inline)
@@ -91,12 +107,46 @@ struct EditTaskView: View {
                 // Date/time may have changed — reschedule (no-op cancel
                 // if the task is completed)
                 NotificationManager.scheduleReminder(for: task)
+                reconcilePhotos()
             }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
+            .onChange(of: pickerItems) { _, items in
+                guard !items.isEmpty else { return }
+                Task {
+                    for item in items {
+                        if let data = try? await item.loadTransferable(type: Data.self) {
+                            photosData.append(data)
+                        }
+                    }
+                    pickerItems = []
+                }
+            }
+            .sheet(item: $viewerPhoto) { item in
+                PhotoViewerSheet(data: item.data)
+            }
+        }
+    }
+
+    /// Reconciles the staged photo bytes against `task.photos` on the way
+    /// out — keep unchanged photos, delete removed ones, insert only new
+    /// ones, so untouched image blobs aren't rewritten on every dismiss.
+    private func reconcilePhotos() {
+        var pending = photosData
+        for photo in (task.photos ?? []).sorted(by: { $0.createdAt < $1.createdAt }) {
+            if let index = pending.firstIndex(of: photo.data) {
+                pending.remove(at: index)
+            } else {
+                modelContext.delete(photo)
+            }
+        }
+        for data in pending {
+            let photo = TaskPhoto(data: data)
+            photo.task = task
+            modelContext.insert(photo)
         }
     }
 }

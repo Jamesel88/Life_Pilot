@@ -19,6 +19,20 @@ class TaskBox {
     /// distinct from `subtasks`, which are this box's own children.
     @Relationship(inverse: \BoxSubtask.linkedBoxes)
     var linkedSubtasks: [BoxSubtask]?
+    /// Tasks waiting on this box to finish — inverse of
+    /// TaskItem.blockedByBoxes, maintained automatically.
+    var blocksTasks: [TaskItem]?
+    /// Tasks that must finish before this box can start (box depends on
+    /// a task). Inverse of TaskItem.blocksBoxes.
+    @Relationship(inverse: \TaskItem.blocksBoxes)
+    var blockedByTasks: [TaskItem]?
+    /// Subtasks waiting on this box to finish — inverse of
+    /// BoxSubtask.blockedByBoxes, maintained automatically.
+    var blocksSubtasks: [BoxSubtask]?
+    /// Subtasks that must finish before this box can start (box depends
+    /// on a subtask). Inverse of BoxSubtask.blocksBoxes.
+    @Relationship(inverse: \BoxSubtask.blocksBoxes)
+    var blockedBySubtasks: [BoxSubtask]?
 
     init(name: String, colorHex: String, group: TaskGroup? = nil) {
         self.name = name
@@ -82,6 +96,48 @@ extension TaskBox {
     func unlink(_ subtask: BoxSubtask) {
         linkedSubtasks?.removeAll { $0 === subtask }
     }
+
+    /// Tasks that must finish before this box can start.
+    var allTaskBlockers: [TaskItem] { blockedByTasks ?? [] }
+
+    /// Tasks waiting on this box to finish.
+    var allBlockedTasks: [TaskItem] { blocksTasks ?? [] }
+
+    /// Marks `task` as a prerequisite of this box (the box depends on the
+    /// task). Stored on THIS box's `blockedByTasks`; SwiftData maintains
+    /// `task.blocksBoxes` as the inverse automatically.
+    func addBlocker(_ task: TaskItem) {
+        guard !allTaskBlockers.contains(where: { $0 === task }) else { return }
+        if blockedByTasks == nil { blockedByTasks = [] }
+        blockedByTasks?.append(task)
+    }
+
+    /// Removes a prerequisite edge — cleared from both sides.
+    func removeBlocker(_ task: TaskItem) {
+        blockedByTasks?.removeAll { $0 === task }
+        blocksTasks?.removeAll { $0 === task }
+    }
+
+    /// Subtasks that must finish before this box can start.
+    var allSubtaskBlockers: [BoxSubtask] { blockedBySubtasks ?? [] }
+
+    /// Subtasks waiting on this box to finish.
+    var allBlockedSubtasks: [BoxSubtask] { blocksSubtasks ?? [] }
+
+    /// Marks `subtask` as a prerequisite of this box. Stored on THIS
+    /// box's `blockedBySubtasks`; SwiftData maintains
+    /// `subtask.blocksBoxes` as the inverse automatically.
+    func addBlocker(_ subtask: BoxSubtask) {
+        guard !allSubtaskBlockers.contains(where: { $0 === subtask }) else { return }
+        if blockedBySubtasks == nil { blockedBySubtasks = [] }
+        blockedBySubtasks?.append(subtask)
+    }
+
+    /// Removes a prerequisite edge — cleared from both sides.
+    func removeBlocker(_ subtask: BoxSubtask) {
+        blockedBySubtasks?.removeAll { $0 === subtask }
+        blocksSubtasks?.removeAll { $0 === subtask }
+    }
 }
 
 /// A lightweight checklist item that lives inside one TaskBox only —
@@ -110,6 +166,32 @@ class BoxSubtask {
     @Relationship(inverse: \BoxSubtask.linkedBySubtasks)
     var linkedSubtasks: [BoxSubtask]?
     var linkedBySubtasks: [BoxSubtask]?
+    /// Directional dependency between peer subtasks — distinct from
+    /// `linkedSubtasks`, which is neutral "related" with no ordering
+    /// implied. Prefixed `subtask...` to stay unambiguous next to that
+    /// existing pair. Same one-sided storage convention:
+    /// `addBlockingSubtask(_:)` appends here, SwiftData maintains
+    /// `subtaskBlocks` as the inverse. Read `allSubtaskBlockers`/
+    /// `allSubtaskBlocked` — never these two directly.
+    @Relationship(inverse: \BoxSubtask.subtaskBlocks)
+    var subtaskBlockedBy: [BoxSubtask]?
+    /// Subtasks THIS subtask blocks — the inverse side, maintained
+    /// automatically.
+    var subtaskBlocks: [BoxSubtask]?
+    /// Tasks waiting on this subtask to finish — inverse of
+    /// TaskItem.blockedBySubtasks, maintained automatically.
+    var blocksTasks: [TaskItem]?
+    /// Tasks that must finish before this subtask can start (subtask
+    /// depends on a task). Inverse of TaskItem.blocksSubtasks.
+    @Relationship(inverse: \TaskItem.blocksSubtasks)
+    var blockedByTasks: [TaskItem]?
+    /// Boxes waiting on this subtask to finish — inverse of
+    /// TaskBox.blockedBySubtasks, maintained automatically.
+    var blocksBoxes: [TaskBox]?
+    /// Boxes that must finish before this subtask can start (subtask
+    /// depends on a box). Inverse of TaskBox.blocksSubtasks.
+    @Relationship(inverse: \TaskBox.blocksSubtasks)
+    var blockedByBoxes: [TaskBox]?
 
     init(title: String, dueDate: Date? = nil) {
         self.title = title
@@ -167,6 +249,70 @@ extension BoxSubtask {
     func unlink(_ other: BoxSubtask) {
         linkedSubtasks?.removeAll { $0 === other }
         linkedBySubtasks?.removeAll { $0 === other }
+    }
+
+    /// Subtasks that must finish before this one can start.
+    var allSubtaskBlockers: [BoxSubtask] { subtaskBlockedBy ?? [] }
+
+    /// Subtasks waiting on this one to finish.
+    var allSubtaskBlocked: [BoxSubtask] { subtaskBlocks ?? [] }
+
+    /// Marks `other` as a prerequisite of this subtask. Stored as an edge
+    /// on THIS subtask's `subtaskBlockedBy`; SwiftData maintains
+    /// `other.subtaskBlocks` as the inverse automatically.
+    func addBlockingSubtask(_ other: BoxSubtask) {
+        guard other !== self, !allSubtaskBlockers.contains(where: { $0 === other }) else { return }
+        if subtaskBlockedBy == nil { subtaskBlockedBy = [] }
+        subtaskBlockedBy?.append(other)
+    }
+
+    /// Removes a prerequisite edge — cleared from both sides so a direct
+    /// mutation from either subtask stays consistent.
+    func removeBlockingSubtask(_ other: BoxSubtask) {
+        subtaskBlockedBy?.removeAll { $0 === other }
+        subtaskBlocks?.removeAll { $0 === other }
+    }
+
+    /// Tasks that must finish before this subtask can start.
+    var allTaskBlockers: [TaskItem] { blockedByTasks ?? [] }
+
+    /// Tasks waiting on this subtask to finish.
+    var allBlockedTasks: [TaskItem] { blocksTasks ?? [] }
+
+    /// Marks `task` as a prerequisite of this subtask. Stored on THIS
+    /// subtask's `blockedByTasks`; SwiftData maintains `task.blocksSubtasks`
+    /// as the inverse automatically.
+    func addBlocker(_ task: TaskItem) {
+        guard !allTaskBlockers.contains(where: { $0 === task }) else { return }
+        if blockedByTasks == nil { blockedByTasks = [] }
+        blockedByTasks?.append(task)
+    }
+
+    /// Removes a prerequisite edge — cleared from both sides.
+    func removeBlocker(_ task: TaskItem) {
+        blockedByTasks?.removeAll { $0 === task }
+        blocksTasks?.removeAll { $0 === task }
+    }
+
+    /// Boxes that must finish before this subtask can start.
+    var allBoxBlockers: [TaskBox] { blockedByBoxes ?? [] }
+
+    /// Boxes waiting on this subtask to finish.
+    var allBlockedBoxes: [TaskBox] { blocksBoxes ?? [] }
+
+    /// Marks `box` as a prerequisite of this subtask. Stored on THIS
+    /// subtask's `blockedByBoxes`; SwiftData maintains `box.blocksSubtasks`
+    /// as the inverse automatically.
+    func addBlocker(_ box: TaskBox) {
+        guard !allBoxBlockers.contains(where: { $0 === box }) else { return }
+        if blockedByBoxes == nil { blockedByBoxes = [] }
+        blockedByBoxes?.append(box)
+    }
+
+    /// Removes a prerequisite edge — cleared from both sides.
+    func removeBlocker(_ box: TaskBox) {
+        blockedByBoxes?.removeAll { $0 === box }
+        blocksBoxes?.removeAll { $0 === box }
     }
 }
 

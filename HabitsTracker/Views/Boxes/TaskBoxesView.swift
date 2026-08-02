@@ -5,9 +5,13 @@ import SwiftData
 /// box has outstanding items and its contents rise as items are completed.
 struct TaskBoxesView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(TabRouter.self) private var router
     @Query(sort: \TaskBox.createdAt) private var boxes: [TaskBox]
     @State private var showingAddBox = false
     @State private var boxPendingDeletion: TaskBox?
+    @State private var routerBoxToOpen: TaskBox?
+    @State private var showingRouterBoxDetail = false
+    @State private var routerSubtaskToOpen: BoxSubtask?
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
 
@@ -47,6 +51,31 @@ struct TaskBoxesView: View {
             }
             .sheet(isPresented: $showingAddBox) {
                 AddTaskBoxView()
+            }
+            .onChange(of: router.pendingBoxToOpen) { _, newValue in
+                guard let box = newValue else { return }
+                routerBoxToOpen = box
+                showingRouterBoxDetail = true
+                router.pendingBoxToOpen = nil
+            }
+            .navigationDestination(isPresented: $showingRouterBoxDetail) {
+                if let routerBoxToOpen {
+                    TaskBoxDetailView(box: routerBoxToOpen)
+                }
+            }
+            // A subtask can't be opened on its own tab, so the Links tab
+            // routes here (alongside its parent box, for back-navigation
+            // context) and this presents the subtask's own editor
+            // directly rather than leaving the user at the box detail.
+            .onChange(of: router.pendingSubtaskToOpen) { _, newValue in
+                guard let subtask = newValue else { return }
+                routerSubtaskToOpen = subtask
+                router.pendingSubtaskToOpen = nil
+            }
+            .sheet(item: $routerSubtaskToOpen) { subtask in
+                if let box = subtask.box {
+                    SubtaskEditorView(box: box, subtask: subtask)
+                }
             }
             .overlay {
                 if boxes.isEmpty {

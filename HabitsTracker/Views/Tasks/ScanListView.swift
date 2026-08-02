@@ -1,17 +1,70 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import UIKit
 
-/// Photo-of-a-list → tasks. Pick a photo, on-device OCR reads the lines,
-/// each becomes a proposed task (with any written date recognised — lines
-/// without one default to today). Review, untick strays, edit titles,
-/// then add the lot in one tap.
+/// What a scan is populating — drives every piece of copy in this view so
+/// the same scanner reads correctly whether it's filling the Tasks tab, a
+/// compartment box's subtasks, or the shopping list.
+enum ScanKind: Equatable {
+    case tasks, subtasks, shoppingItems
+
+    var singular: String {
+        switch self {
+        case .tasks: "task"
+        case .subtasks: "subtask"
+        case .shoppingItems: "item"
+        }
+    }
+
+    var headline: String {
+        switch self {
+        case .tasks: "Turn a photo into tasks"
+        case .subtasks: "Turn a photo into subtasks"
+        case .shoppingItems: "Turn a photo into a shopping list"
+        }
+    }
+
+    var introDescription: String {
+        switch self {
+        case .tasks, .subtasks:
+            "Snap or choose a photo of any written list. Items with a date — \"Dentist 20/7\", \"Mum's card by Friday\" — get scheduled; everything else lands on today."
+        case .shoppingItems:
+            "Snap or choose a photo of any written list — a shopping list, a note, anything with one item per line."
+        }
+    }
+
+    /// Caption for lines with no recognised date.
+    var undatedCaption: String {
+        switch self {
+        case .tasks: "Today"
+        case .subtasks: "No date"
+        case .shoppingItems: "Item"
+        }
+    }
+
+    func reviewHeader(count: Int) -> String {
+        switch self {
+        case .tasks: "Tasks to add (\(count))"
+        case .subtasks: "Subtasks to add (\(count))"
+        case .shoppingItems: "Items to add (\(count))"
+        }
+    }
+
+    var reviewFooter: String {
+        "Untick anything that isn't a \(singular), and edit titles as needed."
+    }
+}
+
+/// Photo-of-a-list → tasks, subtasks, or shopping items. Pick a photo,
+/// on-device OCR reads the lines, each becomes a proposed item (with any
+/// written date recognised where dates are relevant — lines without one
+/// default to today). Review, untick strays, edit titles, then add the
+/// lot in one tap.
 struct ScanListView: View {
     @Environment(\.dismiss) private var dismiss
 
-    /// Caption for lines with no recognised date — "Today" when scanning
-    /// into tasks, "No date" when scanning into a compartment box.
-    var undatedCaption: String = "Today"
+    var kind: ScanKind = .tasks
     /// Receives the ticked proposals; the caller decides what to create.
     var onConfirm: ([ListScanner.ScannedTask]) -> Void
 
@@ -21,6 +74,8 @@ struct ScanListView: View {
 
     @State private var phase: Phase = .pick
     @State private var pickerItem: PhotosPickerItem?
+    @State private var showingPhotosPicker = false
+    @State private var showingCamera = false
     @State private var scannedImage: UIImage?
     @State private var proposals: [ListScanner.ScannedTask] = []
 
@@ -61,6 +116,16 @@ struct ScanListView: View {
                 guard let item else { return }
                 process(item)
             }
+            .photosPicker(isPresented: $showingPhotosPicker, selection: $pickerItem, matching: .images)
+            .fullScreenCover(isPresented: $showingCamera) {
+                CameraCaptureView { image in
+                    showingCamera = false
+                    if let image {
+                        process(cameraImage: image)
+                    }
+                }
+                .ignoresSafeArea()
+            }
         }
     }
 
@@ -71,20 +136,43 @@ struct ScanListView: View {
             Image(systemName: "text.viewfinder")
                 .font(.system(size: 52))
                 .foregroundStyle(Color.accentTasks)
-            Text("Turn a photo into tasks")
+            Text(kind.headline)
                 .font(.headline)
-            Text("Snap or choose a photo of any written list. Items with a date — \"Dentist 20/7\", \"Mum's card by Friday\" — get scheduled; everything else lands on today.")
+            Text(kind.introDescription)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
 
-            PhotosPicker(selection: $pickerItem, matching: .images) {
+            choosePhotoMenu {
                 Label("Choose Photo", systemImage: "photo.on.rectangle")
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.accentTasks)
         }
+    }
+
+    /// One entry point, two sources — offered as a pop-out menu since
+    /// there's no room for two separate buttons in either layout this
+    /// appears in.
+    @ViewBuilder
+    private func choosePhotoMenu<MenuLabel: View>(@ViewBuilder label: () -> MenuLabel) -> some View {
+        Menu {
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button {
+                    showingCamera = true
+                } label: {
+                    Label("Take Photo", systemImage: "camera")
+                }
+            }
+            Button {
+                showingPhotosPicker = true
+            } label: {
+                Label("Choose from Library", systemImage: "photo.on.rectangle")
+            }
+        } label: {
+            label()
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.accentTasks)
     }
 
     private var reviewList: some View {
@@ -114,19 +202,21 @@ struct ScanListView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 3) {
-                            TextField("Task", text: $task.title)
-                            Text(dateCaption(for: task))
-                                .font(.caption)
-                                .foregroundStyle(task.matchedDate
-                                                 ? Color.accentTasks : .secondary)
+                            TextField(kind.singular.capitalized, text: $task.title)
+                            if kind != .shoppingItems {
+                                Text(dateCaption(for: task))
+                                    .font(.caption)
+                                    .foregroundStyle(task.matchedDate
+                                                     ? Color.accentTasks : .secondary)
+                            }
                         }
                         .opacity(task.isIncluded ? 1 : 0.4)
                     }
                 }
             } header: {
-                Text("Tasks to add (\(includedCount))")
+                Text(kind.reviewHeader(count: includedCount))
             } footer: {
-                Text("Untick anything that isn't a task, and edit titles as needed.")
+                Text(kind.reviewFooter)
             }
         }
     }
@@ -137,15 +227,20 @@ struct ScanListView: View {
         } description: {
             Text(message)
         } actions: {
-            PhotosPicker(selection: $pickerItem, matching: .images) {
+            choosePhotoMenu {
                 Text("Try Another Photo")
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.accentTasks)
         }
     }
 
     // MARK: - Actions
+
+    private func process(cameraImage image: UIImage) {
+        phase = .processing
+        Task {
+            await recognizeAndPropose(image)
+        }
+    }
 
     private func process(_ item: PhotosPickerItem) {
         phase = .processing
@@ -156,24 +251,28 @@ struct ScanListView: View {
                 phase = .failed("Couldn't load that photo.")
                 return
             }
-            scannedImage = image
-            do {
-                let lines = try await ListScanner.recognizeLines(in: image)
-                let tasks = ListScanner.proposedTasks(from: lines)
-                if tasks.isEmpty {
-                    phase = .failed(ListScanner.ScanError.noText.localizedDescription)
-                } else {
-                    proposals = tasks
-                    phase = .review
-                }
-            } catch {
-                phase = .failed(error.localizedDescription)
+            await recognizeAndPropose(image)
+        }
+    }
+
+    private func recognizeAndPropose(_ image: UIImage) async {
+        scannedImage = image
+        do {
+            let lines = try await ListScanner.recognizeLines(in: image)
+            let tasks = ListScanner.proposedTasks(from: lines)
+            if tasks.isEmpty {
+                phase = .failed(ListScanner.ScanError.noText.localizedDescription)
+            } else {
+                proposals = tasks
+                phase = .review
             }
+        } catch {
+            phase = .failed(error.localizedDescription)
         }
     }
 
     private func dateCaption(for task: ListScanner.ScannedTask) -> String {
-        guard task.matchedDate || task.hasTime else { return undatedCaption }
+        guard task.matchedDate || task.hasTime else { return kind.undatedCaption }
         let calendar = Calendar.current
         var caption: String
         if calendar.isDateInToday(task.dueDate) {
@@ -195,5 +294,42 @@ struct ScanListView: View {
         }
         onConfirm(included)
         dismiss()
+    }
+}
+
+/// Wraps UIImagePickerController's camera source — PhotosPicker only
+/// reaches the photo library, and SwiftUI has no native "take a photo"
+/// view of its own.
+private struct CameraCaptureView: UIViewControllerRepresentable {
+    var onCapture: (UIImage?) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onCapture: onCapture)
+    }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onCapture: (UIImage?) -> Void
+
+        init(onCapture: @escaping (UIImage?) -> Void) {
+            self.onCapture = onCapture
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            onCapture(info[.originalImage] as? UIImage)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            onCapture(nil)
+        }
     }
 }

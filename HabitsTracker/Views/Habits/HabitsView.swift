@@ -30,106 +30,13 @@ struct HabitsView: View {
 
     private var habitsNavigationStack: some View {
         NavigationStack {
-            List {
-                // MARK: Scope menu
-                Section {
-                    Menu {
-                        ForEach(HabitWheelScope.allCases, id: \.self) { option in
-                            Button {
-                                scope = option
-                            } label: {
-                                if scope == option {
-                                    Label(option.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(option.rawValue)
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "line.3.horizontal")
-                            Text(scope.rawValue)
-                                .font(.subheadline)
-                            Image(systemName: "chevron.down")
-                                .font(.caption2)
-                        }
-                        .foregroundStyle(.primary)
-                    }
-                }
-
-                // MARK: Radial habit wheel
-                Section {
-                    VStack(spacing: 4) {
-                        HStack {
-                            Button {
-                                changePeriod(-1)
-                            } label: {
-                                Image(systemName: "chevron.left.circle.fill")
-                                    .font(.title3)
-                            }
-                            Spacer()
-                            Text(periodTitle)
-                                .font(.subheadline.bold())
-                            Spacer()
-                            Button {
-                                changePeriod(1)
-                            } label: {
-                                Image(systemName: "chevron.right.circle.fill")
-                                    .font(.title3)
-                            }
-                            .disabled(isCurrentPeriod)
-                        }
-                        .buttonStyle(.borderless)
-
-                        HabitRingCalendarView(referenceDate: referenceDate, scope: scope,
-                                              habits: habits,
-                                              interactive: scope == .week,
-                                              onToggle: toggleHabit)
-                            .frame(height: 340)
-                            .frame(maxWidth: .infinity)
-
-                        if scope == .month {
-                            Text("Overview — switch to Weekly view to log days")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        if habits.count > 10 {
-                            Text("Showing the first 10 habits on the wheel")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                // MARK: All habits (interactive)
-                Section("All habits") {
-                    ForEach(habits) { habit in
-                        HStack {
-                            CompletionToggleButton(isCompleted: isDone(habit),
-                                                   tint: .accentHabits,
-                                                   itemTitle: habit.name) {
-                                toggle(habit)
-                            }
-
-                            VStack(alignment: .leading) {
-                                Text(habit.name)
-                                    .strikethrough(isDone(habit))
-                                Text(habit.frequency.label)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture { habitToEdit = habit }
-                        }
-                    }
-                    .onDelete { indexSet in
-                        for index in indexSet {
-                            NotificationManager.cancelReminder(for: habits[index])
-                            modelContext.delete(habits[index])
-                        }
-                    }
+            Group {
+                if habits.isEmpty {
+                    ContentUnavailableView("No habits yet",
+                        systemImage: "repeat",
+                        description: Text("Tap + to add your first habit"))
+                } else {
+                    habitsList
                 }
             }
             .monogramWatermark()
@@ -148,15 +55,113 @@ struct HabitsView: View {
             .sheet(item: $habitToEdit) { habit in
                 EditHabitView(habit: habit)
             }
-            .overlay {
-                if habits.isEmpty {
-                    ContentUnavailableView("No habits yet",
-                        systemImage: "repeat",
-                        description: Text("Tap + to add your first habit"))
+        }
+        .tint(.accentHabits)
+    }
+
+    private var habitsList: some View {
+        List {
+            // MARK: Scope menu
+            Section {
+                Menu {
+                    ForEach(HabitWheelScope.allCases, id: \.self) { option in
+                        Button {
+                            scope = option
+                        } label: {
+                            if scope == option {
+                                Label(option.rawValue, systemImage: "checkmark")
+                            } else {
+                                Text(option.rawValue)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "line.3.horizontal")
+                        Text(scope.rawValue)
+                            .font(.subheadline)
+                        Image(systemName: "chevron.down")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.primary)
+                }
+            }
+
+            // MARK: Radial habit wheel
+            Section {
+                VStack(spacing: 4) {
+                    HStack {
+                        Button {
+                            changePeriod(-1)
+                        } label: {
+                            Image(systemName: "chevron.left.circle.fill")
+                                .font(.title3)
+                        }
+                        Spacer()
+                        Text(periodTitle)
+                            .font(.subheadline.bold())
+                        Spacer()
+                        Button {
+                            changePeriod(1)
+                        } label: {
+                            Image(systemName: "chevron.right.circle.fill")
+                                .font(.title3)
+                        }
+                        .disabled(isCurrentPeriod)
+                    }
+                    .buttonStyle(.borderless)
+
+                    HabitRingCalendarView(referenceDate: referenceDate, scope: scope,
+                                          habits: habits,
+                                          interactive: scope == .week,
+                                          onToggle: toggleHabit)
+                        .frame(height: 340)
+                        .frame(maxWidth: .infinity)
+
+                    if scope == .month {
+                        Text("Overview — switch to Weekly view to log days")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if habits.count > 10 {
+                        Text("Showing the first 10 habits on the wheel")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            // MARK: All habits (interactive)
+            Section("All habits") {
+                ForEach(habits) { habit in
+                    HStack {
+                        CompletionToggleButton(isCompleted: isDone(habit),
+                                               tint: .accentHabits,
+                                               itemTitle: habit.name) {
+                            toggle(habit)
+                        }
+
+                        VStack(alignment: .leading) {
+                            Text(habit.name)
+                                .strikethrough(isDone(habit))
+                            Text(habit.frequency.label)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture { habitToEdit = habit }
+                    }
+                }
+                .onDelete { indexSet in
+                    for index in indexSet {
+                        NotificationManager.cancelReminder(for: habits[index])
+                        modelContext.delete(habits[index])
+                    }
                 }
             }
         }
-        .tint(.accentHabits)
     }
 
     // MARK: - Helpers

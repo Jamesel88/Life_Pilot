@@ -9,6 +9,7 @@ struct ShoppingListView: View {
     @Query(sort: \ShoppingItem.createdAt) private var items: [ShoppingItem]
     @State private var newItemName = ""
     @FocusState private var addFieldFocused: Bool
+    @State private var showingScanList = false
 
     private var toBuy: [ShoppingItem] { items.filter { !$0.isChecked } }
     private var inBasket: [ShoppingItem] { items.filter(\.isChecked) }
@@ -68,6 +69,25 @@ struct ShoppingListView: View {
         .monogramWatermark()
         .navigationTitle("Shopping List")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingScanList = true
+                } label: {
+                    Image(systemName: "text.viewfinder")
+                }
+                .accessibilityLabel("Scan a list from a photo")
+            }
+        }
+        .sheet(isPresented: $showingScanList) {
+            ScanListView(kind: .shoppingItems) { proposals in
+                for proposal in proposals {
+                    let name = proposal.title.trimmingCharacters(in: .whitespaces)
+                    guard !name.isEmpty else { continue }
+                    modelContext.insert(ShoppingItem(name: name))
+                }
+            }
+        }
         .overlay {
             if items.isEmpty {
                 ContentUnavailableView("Nothing on the list",

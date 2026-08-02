@@ -19,6 +19,8 @@ struct WidgetSnapshot: Codable {
     /// Mirrors the in-app appearance setting ("system"/"light"/"dark") so
     /// widgets match the app rather than the system
     var appearance: String?
+    /// First name from the user's profile, for the widget's greeting header
+    var userName: String?
     var boxes: [BoxSnapshot]
 
     struct BoxSnapshot: Codable {
@@ -48,6 +50,7 @@ enum WidgetBridge {
                   FetchDescriptor<TaskBox>(sortBy: [SortDescriptor(\.createdAt)]))
         else { return }
         let shoppingItems = (try? context.fetch(FetchDescriptor<ShoppingItem>())) ?? []
+        let profileName = (try? context.fetch(FetchDescriptor<UserProfile>()))?.first?.name
 
         let todayTasks = tasks.filter { calendar.isDateInToday($0.dueDate) }
         let index = HabitCompletionIndex(habits: habits)
@@ -66,6 +69,7 @@ enum WidgetBridge {
             // default the app itself renders with
             appearance: UserDefaults.standard.string(forKey: "appAppearance")
                 ?? AppAppearance.dark.rawValue,
+            userName: (profileName?.isEmpty ?? true) ? nil : profileName,
             boxes: boxes.map {
                 WidgetSnapshot.BoxSnapshot(name: $0.name,
                                            completed: $0.completedCount,

@@ -1,5 +1,6 @@
 import Foundation
-import UserNotifications
+import SwiftData
+@preconcurrency import UserNotifications
 
 enum NotificationManager {
 
@@ -101,6 +102,48 @@ enum NotificationManager {
         }
         for task in tasks {
             scheduleReminder(for: task)
+        }
+    }
+
+    /// Safety net so a reminder can never outlive its task: every path that
+    /// completes or deletes a task already cancels its own reminder, but
+    /// this closes the gap for anything that slips through (a race, a
+    /// future path someone forgets to wire up) by reconciling every
+    /// pending task reminder against which tasks are actually still
+    /// active, each time the app comes to the foreground.
+    @MainActor
+    static func pruneStaleTaskReminders(container: ModelContainer) {
+        let context = container.mainContext
+        guard let tasks = try? context.fetch(FetchDescriptor<TaskItem>())
+        else { return }
+
+        // Backfill tasks saved before `reminderUUID` existed, so every
+        // task ends up on the stable identity scheme rather than the old
+        // PersistentIdentifier-derived fallback. Re-scheduling each one
+        // re-homes any reminder it still needs onto the new identifier —
+        // without this, the prune pass below would read the old
+        // PersistentIdentifier-based request as orphaned and delete it.
+        var didBackfill = false
+        for task in tasks where task.reminderUUID == nil {
+            task.reminderUUID = UUID()
+            didBackfill = true
+        }
+        if didBackfill {
+            try? context.save()
+            for task in tasks where !task.isCompleted {
+                scheduleReminder(for: task)
+            }
+        }
+
+        let validIDs = Set(tasks.filter { !$0.isCompleted }.map(\.reminderID))
+
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let staleIDs = requests
+                .map(\.identifier)
+                .filter { $0.hasPrefix("task-reminder-") && !validIDs.contains($0) }
+            guard !staleIDs.isEmpty else { return }
+            center.removePendingNotificationRequests(withIdentifiers: staleIDs)
         }
     }
 }

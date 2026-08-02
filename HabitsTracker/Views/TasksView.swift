@@ -6,21 +6,41 @@ enum TaskFilter: String, CaseIterable {
     case outstanding = "Outstanding tasks"
     case groups = "By groups"
     case completed = "Completed tasks"
+
+    var systemImage: String {
+        switch self {
+        case .days: "calendar.day.timeline.left"
+        case .outstanding: "circle.dashed"
+        case .groups: "person.2.circle"
+        case .completed: "checkmark.seal"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .days: "Overdue, today, this week and beyond"
+        case .outstanding: "Every task that isn't finished yet"
+        case .groups: "Sorted into your colour-coded groups"
+        case .completed: "Everything you've already ticked off"
+        }
+    }
 }
 
 struct TasksView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(TabRouter.self) private var router
     @Query(sort: \TaskItem.dueDate) private var allTasks: [TaskItem]
     @Query private var groups: [TaskGroup]
     @State private var showingAddTask = false
-    @State private var showingAddGroup = false
     @State private var taskToEdit: TaskItem?
-    @State private var groupToEdit: TaskGroup?
     @State private var filter: TaskFilter = .days
     @State private var collapsedGroups: Set<PersistentIdentifier> = []
     @State private var searchText = ""
-    @State private var quickAddText = ""
     @State private var showingScanList = false
+    @State private var showingMenu = false
+    @State private var showingCalendarPush = false
+    @State private var showingShoppingPush = false
+    @State private var showingGroupsManager = false
 
     // MARK: - Filtered collections
 
@@ -68,20 +88,32 @@ struct TasksView: View {
     // MARK: - Body
 
     var body: some View {
+        ZStack {
+            navigationContent
+
+            if showingMenu {
+                TasksMenuOverlay(
+                    isPresented: $showingMenu,
+                    filter: $filter,
+                    onScanList: { showingScanList = true },
+                    onCalendar: { showingCalendarPush = true },
+                    onShopping: { showingShoppingPush = true },
+                    onEditGroups: { showingGroupsManager = true }
+                )
+            }
+        }
+    }
+
+    /// Everything that used to be `body` — pulled into its own property so
+    /// the menu overlay above can sit as a sibling of the whole
+    /// NavigationStack instead of attached to content inside it. An
+    /// overlay attached inside a NavigationStack paints *underneath* that
+    /// stack's own nav bar and this app's custom tab bar (mounted via
+    /// `compartmentsTabBar()`'s safe-area inset) — only a sibling in an
+    /// outer ZStack can cover both.
+    private var navigationContent: some View {
         NavigationStack {
             List {
-                // MARK: Quick add
-                Section {
-                    HStack {
-                        Image(systemName: "plus.circle")
-                            .foregroundStyle(.secondary)
-                        TextField("Quick add — try \"Dentist tomorrow 3pm\"",
-                                  text: $quickAddText)
-                            .onSubmit(quickAdd)
-                            .submitLabel(.done)
-                    }
-                }
-
                 // MARK: Content per filter
                 switch filter {
                 case .days:
@@ -164,69 +196,31 @@ struct TasksView: View {
             .searchable(text: $searchText, prompt: "Search tasks")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        ForEach(TaskFilter.allCases, id: \.self) { option in
-                            Button {
-                                filter = option
-                            } label: {
-                                if filter == option {
-                                    Label(option.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(option.rawValue)
-                                }
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                    }
-                    .accessibilityLabel("Filter: \(filter.rawValue)")
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Section("Edit Groups") {
-                            if groups.isEmpty {
-                                Button {
-                                    showingAddGroup = true
-                                } label: {
-                                    Label("Add Group", systemImage: "plus.circle")
-                                }
-                            } else {
-                                ForEach(groups) { group in
-                                    Button {
-                                        groupToEdit = group
-                                    } label: {
-                                        Label(group.name, systemImage: "circle.fill")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "pencil.circle")
-                    }
-                }
-                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
-                        showingScanList = true
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            showingMenu = true
+                        }
                     } label: {
-                        Image(systemName: "text.viewfinder")
+                        Image(systemName: "line.3.horizontal")
                     }
-                    .accessibilityLabel("Scan a list from a photo")
-                    NavigationLink {
-                        CalendarTasksView()
-                    } label: {
-                        Image(systemName: "calendar")
-                    }
-                    NavigationLink {
-                        ShoppingListView()
-                    } label: {
-                        Image(systemName: "cart")
-                    }
+                    .accessibilityLabel("Menu")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showingAddTask = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.accentTasks)
                     }
+                    .accessibilityLabel("Add task")
                 }
+            }
+            .navigationDestination(isPresented: $showingCalendarPush) {
+                CalendarTasksView()
+            }
+            .navigationDestination(isPresented: $showingShoppingPush) {
+                ShoppingListView()
             }
             .sheet(isPresented: $showingAddTask) {
                 AddTaskView()
@@ -246,14 +240,16 @@ struct TasksView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddGroup) {
-                AddGroupView()
+            .sheet(isPresented: $showingGroupsManager) {
+                EditGroupsListView()
             }
             .sheet(item: $taskToEdit) { task in
                 EditTaskView(task: task)
             }
-            .sheet(item: $groupToEdit) { group in
-                EditGroupView(group: group)
+            .onChange(of: router.pendingTaskToOpen) { _, newValue in
+                guard let task = newValue else { return }
+                taskToEdit = task
+                router.pendingTaskToOpen = nil
             }
             .overlay {
                 if allTasks.isEmpty {
@@ -294,21 +290,6 @@ struct TasksView: View {
 
     private func matchesSearch(_ task: TaskItem) -> Bool {
         searchText.isEmpty || task.title.localizedCaseInsensitiveContains(searchText)
-    }
-
-    /// One-line capture: parse date words out of the text and create the
-    /// task straight away ("Dentist tomorrow 3pm" → task titled "Dentist").
-    private func quickAdd() {
-        let input = quickAddText.trimmingCharacters(in: .whitespaces)
-        guard !input.isEmpty else { return }
-        let parsed = QuickAddParser.parse(input)
-        let task = TaskItem(title: parsed.title,
-                            dueDate: parsed.dueDate,
-                            hasTime: parsed.hasTime)
-        modelContext.insert(task)
-        try? modelContext.save()
-        NotificationManager.scheduleReminder(for: task)
-        quickAddText = ""
     }
 
     private func expansionBinding(for group: TaskGroup) -> Binding<Bool> {

@@ -49,6 +49,12 @@ struct EditGroupView: View {
             .alert("Delete this colour code?", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) {
+                    // Deleting the group cascades to its tasks, but that
+                    // cascade bypasses cancelReminder — clear their
+                    // pending notifications ourselves first.
+                    for task in group.tasks ?? [] {
+                        NotificationManager.cancelReminder(for: task)
+                    }
                     modelContext.delete(group)
                     dismiss()
                 }

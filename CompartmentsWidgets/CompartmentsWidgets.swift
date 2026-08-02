@@ -23,6 +23,8 @@ struct WidgetSnapshot: Codable {
     var shoppingTotal: Int?
     /// Mirrors the in-app appearance setting ("system"/"light"/"dark")
     var appearance: String?
+    /// First name from the user's profile, for the widget's greeting header
+    var userName: String?
     var boxes: [BoxSnapshot]
 
     struct BoxSnapshot: Codable {
@@ -99,11 +101,39 @@ struct SnapshotProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SnapshotEntry>) -> Void) {
-        let entry = SnapshotEntry(date: .now, snapshot: loadSnapshot())
+        let calendar = Calendar.current
+        let now = Date.now
+        let snapshot = loadSnapshot()
+
+        var entries = [SnapshotEntry(date: now, snapshot: snapshot)]
+
+        // The app only rewrites the snapshot when it backgrounds, so
+        // without this, "today's" completed counts stay frozen at
+        // whatever they were before midnight until the app happens to
+        // run again. Bake the rollover into the timeline itself — a
+        // second entry, dated for the next midnight, with today's and
+        // habits' done-counts reset to zero — so it takes effect right on
+        // time even if the device is asleep and nothing re-invokes this
+        // provider. Totals are left as the last snapshot reported (they
+        // rarely change day to day) since only the done-counts are
+        // actually wrong once the day has turned over.
+        if let snapshot, let nextMidnight = calendar.nextDate(
+            after: now, matching: DateComponents(hour: 0, minute: 0, second: 0),
+            matchingPolicy: .nextTime) {
+            var reset = snapshot
+            reset.todayCompleted = 0
+            reset.habitsDone = 0
+            entries.append(SnapshotEntry(date: nextMidnight, snapshot: reset))
+        }
+
         // The app pushes a fresh snapshot whenever it backgrounds; this is
-        // just a fallback cadence
-        let refresh = Calendar.current.date(byAdding: .minute, value: 30, to: .now)!
-        completion(Timeline(entries: [entry], policy: .after(refresh)))
+        // just a fallback cadence — tightened up if midnight lands sooner,
+        // so a real snapshot refresh is fetched shortly after the reset.
+        let fallbackRefresh = calendar.date(byAdding: .minute, value: 30, to: now)!
+        let refresh = entries.count > 1
+            ? min(fallbackRefresh, entries[1].date.addingTimeInterval(120))
+            : fallbackRefresh
+        completion(Timeline(entries: entries, policy: .after(refresh)))
     }
 }
 
@@ -112,11 +142,57 @@ extension WidgetSnapshot {
         updatedAt: .now, todayCompleted: 3, todayTotal: 5,
         habitsDone: 2, habitsTotal: 4,
         shoppingChecked: 5, shoppingTotal: 10,
+        userName: "James",
         boxes: [
             BoxSnapshot(name: "Move house", completed: 4, total: 6, colorHex: "B08968"),
             BoxSnapshot(name: "Tax return", completed: 1, total: 4, colorHex: "409CFF"),
             BoxSnapshot(name: "Garden", completed: 2, total: 3, colorHex: "34C759")
         ])
+}
+
+// MARK: - Greeting header
+
+/// "Good morning"/"afternoon"/"evening"/"night" for the given moment —
+/// widgets refresh at least every 30 minutes, which is plenty of
+/// resolution for these broad time-of-day bands.
+private func greeting(at date: Date) -> String {
+    switch Calendar.current.component(.hour, from: date) {
+    case 5..<12: return "Good morning"
+    case 12..<17: return "Good afternoon"
+    case 17..<22: return "Good evening"
+    default: return "Good night"
+    }
+}
+
+private let widgetDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.setLocalizedDateFormatFromTemplate("EEEE, MMM d")
+    return formatter
+}()
+
+/// Date + time-aware greeting shown at the top of the medium/large widget
+/// layouts, where there's room for it.
+private struct WidgetGreetingHeader: View {
+    let name: String?
+    let date: Date
+
+    private var greetingText: String {
+        let base = greeting(at: date)
+        guard let name, !name.isEmpty else { return base }
+        let firstName = name.split(separator: " ").first.map(String.init) ?? name
+        return "\(base), \(firstName)"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(greetingText)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+            Text(widgetDateFormatter.string(from: date))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
 }
 
 // MARK: - Shared pieces
@@ -349,29 +425,34 @@ struct TodayRingsView: View {
             .font(.caption2)
 
         case .systemMedium:
-            HStack(spacing: 16) {
-                WidgetDayTray(slots: traySlots, isSealed: isSealed)
-                    .frame(width: 124, height: 92)
-                VStack(alignment: .leading, spacing: 7) {
-                    statLine(color: .green, label: "Tasks today",
-                             value: "\(todayCompleted)/\(todayTotal)")
-                    statLine(color: .orange, label: "Habits",
-                             value: "\(habitsDone)/\(habitsTotal)")
-                    if hasShopping {
-                        statLine(color: shoppingColor, label: "Shopping",
-                                 value: "\(shoppingChecked)/\(shoppingTotal)")
+            VStack(alignment: .leading, spacing: 8) {
+                WidgetGreetingHeader(name: entry.snapshot?.userName, date: entry.date)
+                HStack(spacing: 16) {
+                    WidgetDayTray(slots: traySlots, isSealed: isSealed)
+                        .frame(width: 124, height: 92)
+                    VStack(alignment: .leading, spacing: 7) {
+                        statLine(color: .green, label: "Tasks today",
+                                 value: "\(todayCompleted)/\(todayTotal)")
+                        statLine(color: .orange, label: "Habits",
+                                 value: "\(habitsDone)/\(habitsTotal)")
+                        if hasShopping {
+                            statLine(color: shoppingColor, label: "Shopping",
+                                     value: "\(shoppingChecked)/\(shoppingTotal)")
+                        }
+                        statLine(color: Color(hex: "B08968"), label: "Boxes open",
+                                 value: "\(boxesInProgress)")
                     }
-                    statLine(color: Color(hex: "B08968"), label: "Boxes open",
-                             value: "\(boxesInProgress)")
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
             }
             .padding(.horizontal, 4)
 
         case .systemLarge:
-            VStack(spacing: 18) {
+            VStack(spacing: 14) {
+                WidgetGreetingHeader(name: entry.snapshot?.userName, date: entry.date)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 WidgetDayTray(slots: traySlots, isSealed: isSealed, cellCap: 9)
-                    .frame(height: 170)
+                    .frame(height: 155)
                     .padding(.horizontal, 8)
                 HStack(spacing: 12) {
                     largeStat(color: .green, label: "tasks today",
@@ -475,15 +556,19 @@ struct CompartmentBoxWidgetView: View {
         } else {
             switch family {
             case .systemMedium:
-                HStack(spacing: 14) {
-                    ForEach(Array(boxes.prefix(3).enumerated()), id: \.offset) { _, box in
-                        boxColumn(box)
+                VStack(alignment: .leading, spacing: 8) {
+                    WidgetGreetingHeader(name: entry.snapshot?.userName, date: entry.date)
+                    HStack(spacing: 14) {
+                        ForEach(Array(boxes.prefix(3).enumerated()), id: \.offset) { _, box in
+                            boxColumn(box)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
 
             case .systemLarge:
-                VStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 12) {
+                    WidgetGreetingHeader(name: entry.snapshot?.userName, date: entry.date)
                     ForEach(Array(boxes.prefix(4).enumerated()), id: \.offset) { _, box in
                         boxRow(box)
                     }

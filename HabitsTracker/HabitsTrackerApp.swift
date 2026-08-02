@@ -43,6 +43,12 @@ struct HabitsTrackerApp: App {
                 if phase == .background || phase == .inactive {
                     WidgetBridge.writeSnapshot(container: Self.sharedModelContainer)
                 }
+                // Coming back to the foreground is also the moment to
+                // sweep away any reminder left over from a task that was
+                // completed or deleted while the app wasn't running
+                if phase == .active {
+                    NotificationManager.pruneStaleTaskReminders(container: Self.sharedModelContainer)
+                }
             }
         }
         .modelContainer(Self.sharedModelContainer)
@@ -57,7 +63,7 @@ struct HabitsTrackerApp: App {
 
     /// Not private — App Intents (Siri/Shortcuts) need to reach it too.
     static let sharedModelContainer: ModelContainer = {
-        let schema = Schema([Habit.self, TaskGroup.self, TaskItem.self,
+        let schema = Schema([Habit.self, TaskGroup.self, TaskItem.self, TaskPhoto.self,
                              TaskBox.self, BoxSubtask.self, SubtaskPhoto.self,
                              ShoppingItem.self, UserProfile.self])
         let configuration = cloudKitSyncEnabled

@@ -111,7 +111,7 @@ struct AddTaskBoxView: View {
         }
         .presentationDetents([.medium, .large])
         .sheet(isPresented: $showingScanList) {
-            ScanListView(undatedCaption: "No date") { proposals in
+            ScanListView(kind: .subtasks) { proposals in
                 pendingSubtasks.append(contentsOf: proposals)
             }
         }

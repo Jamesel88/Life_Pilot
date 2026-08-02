@@ -6,6 +6,7 @@ import SwiftData
 /// "Up next" task list, and group chips. One focal object, one visual
 /// language, one screen.
 struct DashboardView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var allTasks: [TaskItem]
     @Query private var groups: [TaskGroup]
     @Query private var habits: [Habit]
@@ -14,6 +15,7 @@ struct DashboardView: View {
     @Binding var tabSelection: AppTab
     @AppStorage("userName") private var userName = ""
     @State private var showingInsightsFromTray = false
+    @State private var quickAddText = ""
 
     private var calendar: Calendar { .current }
 
@@ -83,6 +85,8 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     header
 
+                    quickAddCard
+
                     heroCard(habitIndex)
 
                     urgentBanner
@@ -139,6 +143,36 @@ struct DashboardView: View {
             }
         }
         .padding(.horizontal, 4)
+    }
+
+    // MARK: - Quick add
+
+    private var quickAddCard: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "plus.circle")
+                .foregroundStyle(.secondary)
+            TextField("Quick add — try \"Dentist tomorrow 3pm\"", text: $quickAddText)
+                .onSubmit(quickAdd)
+                .submitLabel(.done)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// One-line capture: parse date words out of the text and create the
+    /// task straight away ("Dentist tomorrow 3pm" → task titled "Dentist").
+    private func quickAdd() {
+        let input = quickAddText.trimmingCharacters(in: .whitespaces)
+        guard !input.isEmpty else { return }
+        let parsed = QuickAddParser.parse(input)
+        let task = TaskItem(title: parsed.title,
+                            dueDate: parsed.dueDate,
+                            hasTime: parsed.hasTime)
+        modelContext.insert(task)
+        try? modelContext.save()
+        NotificationManager.scheduleReminder(for: task)
+        quickAddText = ""
     }
 
     // MARK: - Hero: the day tray, compartments only

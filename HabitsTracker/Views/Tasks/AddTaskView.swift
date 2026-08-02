@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct AddTaskView: View {
     @Environment(\.modelContext) private var modelContext
@@ -14,6 +15,9 @@ struct AddTaskView: View {
     @State private var isUrgent = false
     @State private var repeatRule: TaskRepeat = .never
     @State private var selectedGroup: TaskGroup?
+    @State private var photosData: [Data] = []
+    @State private var pickerItems: [PhotosPickerItem] = []
+    @State private var viewerPhoto: PhotoViewerItem?
 
     // For creating a new colour code inline
     @State private var showingNewGroup = false
@@ -79,6 +83,10 @@ struct AddTaskView: View {
                     GroupPicker(selection: $selectedGroup)
                     Button("Create New Group") { showingNewGroup = true }
                 }
+
+                PhotoAttachmentsSection(photosData: $photosData,
+                                        pickerItems: $pickerItems,
+                                        viewerPhoto: $viewerPhoto)
             }
             .navigationTitle("New Task")
             .navigationBarTitleDisplayMode(.inline)
@@ -97,14 +105,34 @@ struct AddTaskView: View {
                             group: selectedGroup, repeatRule: repeatRule)
                         task.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
                         modelContext.insert(task)
+                        for data in photosData {
+                            let photo = TaskPhoto(data: data)
+                            photo.task = task
+                            modelContext.insert(photo)
+                        }
                         try? modelContext.save()
                         NotificationManager.scheduleReminder(for: task)
                         dismiss()
                     }
                     .disabled(title.isEmpty)
                 }
-            }.sheet(isPresented: $showingNewGroup) {
+            }
+            .sheet(isPresented: $showingNewGroup) {
                 AddGroupView()
+            }
+            .onChange(of: pickerItems) { _, items in
+                guard !items.isEmpty else { return }
+                Task {
+                    for item in items {
+                        if let data = try? await item.loadTransferable(type: Data.self) {
+                            photosData.append(data)
+                        }
+                    }
+                    pickerItems = []
+                }
+            }
+            .sheet(item: $viewerPhoto) { item in
+                PhotoViewerSheet(data: item.data)
             }
         }
     }

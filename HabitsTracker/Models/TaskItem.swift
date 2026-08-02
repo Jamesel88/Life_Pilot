@@ -104,12 +104,48 @@ class TaskItem {
     @Relationship(inverse: \TaskItem.linkedBy)
     var linkedTasks: [TaskItem]?
     var linkedBy: [TaskItem]?
+    /// Directional dependency: tasks that must finish before THIS task can
+    /// start — distinct from `linkedTasks`, which is neutral "related
+    /// work" with no ordering implied. Same one-sided storage convention
+    /// as `linkedTasks`/`linkedBy`: `addBlocker(_:)` appends here,
+    /// SwiftData maintains `blocks` as the inverse. Read `allBlockers`/
+    /// `allBlocked` — never these two directly.
+    @Relationship(inverse: \TaskItem.blocks)
+    var blockedBy: [TaskItem]?
+    /// Tasks waiting on this one to finish — the inverse side, maintained
+    /// automatically.
+    var blocks: [TaskItem]?
+    /// Same directional-dependency concept as blockedBy/blocks, crossing
+    /// into BoxSubtask: subtasks that must finish before this task can
+    /// start. Inverse of BoxSubtask.blocksTasks.
+    @Relationship(inverse: \BoxSubtask.blocksTasks)
+    var blockedBySubtasks: [BoxSubtask]?
+    /// Subtasks waiting on this task to finish — inverse of
+    /// BoxSubtask.blockedByTasks, maintained automatically.
+    var blocksSubtasks: [BoxSubtask]?
+    /// Boxes that must finish before this task can start. Inverse of
+    /// TaskBox.blocksTasks.
+    @Relationship(inverse: \TaskBox.blocksTasks)
+    var blockedByBoxes: [TaskBox]?
+    /// Boxes waiting on this task to finish — inverse of
+    /// TaskBox.blockedByTasks, maintained automatically.
+    var blocksBoxes: [TaskBox]?
     /// Inverse of TaskBox.linkedTasks — the boxes this task is linked into
     var containingBoxes: [TaskBox]?
     /// Inverse of BoxSubtask.linkedTasks — specific subtasks (rather than
     /// a whole box) this task is linked into
     var linkedSubtasks: [BoxSubtask]?
     var repeatRule: TaskRepeat = TaskRepeat.never
+    /// Own identity for the notification system — minted once at creation
+    /// and never recomputed, so a reminder's identifier can't ever drift
+    /// from what was used to schedule it. Optional only so existing tasks
+    /// saved before this field existed migrate in safely with `nil`;
+    /// `reminderID` (TaskItem+Logic.swift) falls back to the old
+    /// PersistentIdentifier-based scheme for those.
+    var reminderUUID: UUID?
+    /// Photo attachments — same convention as BoxSubtask.photos.
+    @Relationship(deleteRule: .cascade, inverse: \TaskPhoto.task)
+    var photos: [TaskPhoto]?
 
     init(title: String, dueDate: Date, hasTime: Bool = false,
          dueWindow: DueWindow = .day,
@@ -123,6 +159,21 @@ class TaskItem {
         self.isCompleted = false
         self.group = group
         self.repeatRule = repeatRule
+        self.reminderUUID = UUID()
+    }
+}
+
+/// A photo attached to one task. Image bytes are kept outside the
+/// database file so large photos don't bloat the store — same convention
+/// as SubtaskPhoto.
+@Model
+class TaskPhoto {
+    @Attribute(.externalStorage) var data: Data = Data()
+    var createdAt: Date = Date.now
+    var task: TaskItem?
+
+    init(data: Data) {
+        self.data = data
     }
 }
 

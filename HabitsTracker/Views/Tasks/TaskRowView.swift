@@ -55,6 +55,14 @@ struct TaskRowView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 }
+                if !(task.photos ?? []).isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "photo")
+                        Text("\((task.photos ?? []).count)")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
@@ -76,19 +84,12 @@ struct TaskRowView: View {
     }
 
     private func toggleCompletion() {
-        task.isCompleted.toggle()
-        task.completedAt = task.isCompleted ? .now : nil
         if task.isCompleted {
-            NotificationManager.cancelReminder(for: task)
-            if let next = task.nextOccurrence() {
-                modelContext.insert(next)
-                // Save first so the new task's permanent ID backs its
-                // notification identifier
-                try? modelContext.save()
-                NotificationManager.scheduleReminder(for: next)
-            }
-        } else {
+            task.isCompleted = false
+            task.completedAt = nil
             NotificationManager.scheduleReminder(for: task)
+        } else {
+            task.complete(in: modelContext)
         }
     }
 }

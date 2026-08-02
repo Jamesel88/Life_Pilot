@@ -115,10 +115,19 @@ extension TaskItem {
 // MARK: - Reminders
 
 extension TaskItem {
-    /// Stable notification identifier — survives relaunches, same encoding
-    /// convention as Habit.reminderID.
+    /// Stable notification identifier. Keyed off `reminderUUID` — minted
+    /// once at creation and stored on the model itself — rather than
+    /// `persistentModelID`: a freshly-inserted object's persistent
+    /// identifier isn't guaranteed to stay byte-identical once SwiftData
+    /// promotes it from temporary to permanent at first save, so a
+    /// reminder scheduled right after insert could end up impossible to
+    /// cancel later under the *new* identifier. Falls back to the old
+    /// scheme only for tasks saved before `reminderUUID` existed.
     var reminderID: String {
-        "task-reminder-\(persistentModelID.encodedString)"
+        if let reminderUUID {
+            return "task-reminder-\(reminderUUID.uuidString)"
+        }
+        return "task-reminder-\(persistentModelID.encodedString)"
     }
 }
 
@@ -134,6 +143,29 @@ extension TaskItem {
                         dueWindow: dueWindow,
                         priority: priority, group: group,
                         repeatRule: repeatRule)
+    }
+}
+
+// MARK: - Completion
+
+extension TaskItem {
+    /// Marks this task done: sets completion state, cancels its reminder,
+    /// and spawns+schedules the next occurrence if it repeats. Pulled out
+    /// of `TaskRowView` so every "mark complete" affordance in the app
+    /// (the task row's checkbox, the Links tab's popover) shares the same
+    /// notification bookkeeping instead of drifting apart.
+    func complete(in modelContext: ModelContext) {
+        guard !isCompleted else { return }
+        isCompleted = true
+        completedAt = .now
+        NotificationManager.cancelReminder(for: self)
+        if let next = nextOccurrence() {
+            modelContext.insert(next)
+            // Save first so the new task's permanent ID backs its
+            // notification identifier
+            try? modelContext.save()
+            NotificationManager.scheduleReminder(for: next)
+        }
     }
 }
 
@@ -162,5 +194,69 @@ extension TaskItem {
     func unlink(from other: TaskItem) {
         linkedTasks?.removeAll { $0 === other }
         linkedBy?.removeAll { $0 === other }
+    }
+
+    /// Tasks that must finish before this one can start.
+    var allBlockers: [TaskItem] { blockedBy ?? [] }
+
+    /// Tasks waiting on this one to finish.
+    var allBlocked: [TaskItem] { blocks ?? [] }
+
+    /// Marks `other` as a prerequisite of this task. Stored as an edge on
+    /// THIS task's `blockedBy`; SwiftData maintains `other.blocks` as the
+    /// inverse automatically.
+    func addBlocker(_ other: TaskItem) {
+        guard other !== self, !allBlockers.contains(where: { $0 === other }) else { return }
+        if blockedBy == nil { blockedBy = [] }
+        blockedBy?.append(other)
+    }
+
+    /// Removes a prerequisite edge — cleared from both sides so a direct
+    /// mutation from either task stays consistent.
+    func removeBlocker(_ other: TaskItem) {
+        blockedBy?.removeAll { $0 === other }
+        blocks?.removeAll { $0 === other }
+    }
+
+    /// Subtasks that must finish before this task can start.
+    var allSubtaskBlockers: [BoxSubtask] { blockedBySubtasks ?? [] }
+
+    /// Subtasks waiting on this task to finish.
+    var allBlockedSubtasks: [BoxSubtask] { blocksSubtasks ?? [] }
+
+    /// Marks `subtask` as a prerequisite of this task. Stored on THIS
+    /// task's `blockedBySubtasks`; SwiftData maintains
+    /// `subtask.blocksTasks` as the inverse automatically.
+    func addBlocker(_ subtask: BoxSubtask) {
+        guard !allSubtaskBlockers.contains(where: { $0 === subtask }) else { return }
+        if blockedBySubtasks == nil { blockedBySubtasks = [] }
+        blockedBySubtasks?.append(subtask)
+    }
+
+    /// Removes a prerequisite edge — cleared from both sides.
+    func removeBlocker(_ subtask: BoxSubtask) {
+        blockedBySubtasks?.removeAll { $0 === subtask }
+        blocksSubtasks?.removeAll { $0 === subtask }
+    }
+
+    /// Boxes that must finish before this task can start.
+    var allBoxBlockers: [TaskBox] { blockedByBoxes ?? [] }
+
+    /// Boxes waiting on this task to finish.
+    var allBlockedBoxes: [TaskBox] { blocksBoxes ?? [] }
+
+    /// Marks `box` as a prerequisite of this task. Stored on THIS task's
+    /// `blockedByBoxes`; SwiftData maintains `box.blocksTasks` as the
+    /// inverse automatically.
+    func addBlocker(_ box: TaskBox) {
+        guard !allBoxBlockers.contains(where: { $0 === box }) else { return }
+        if blockedByBoxes == nil { blockedByBoxes = [] }
+        blockedByBoxes?.append(box)
+    }
+
+    /// Removes a prerequisite edge — cleared from both sides.
+    func removeBlocker(_ box: TaskBox) {
+        blockedByBoxes?.removeAll { $0 === box }
+        blocksBoxes?.removeAll { $0 === box }
     }
 }
